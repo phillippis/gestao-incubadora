@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { ChevronDown } from 'lucide-react';
 import * as API from './supabaseClient';
 
@@ -55,13 +55,14 @@ const GestaoIncubadora = () => {
   // ==================== LIFECYCLE ====================
   useEffect(() => {
     inicializarAplicacao();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
-  if (usuario && ativaPagina === 'empresas') {
-    carregarEmpresas();
-  }
-}, [ativaPagina, filtros, usuario, carregarEmpresas]);
+    if (usuario && ativaPagina === 'empresas') {
+      carregarEmpresas();
+    }
+  }, [ativaPagina, filtros]);
 
   const inicializarAplicacao = async () => {
     try {
@@ -101,14 +102,14 @@ const GestaoIncubadora = () => {
     }
   };
 
-  const carregarEmpresas = async () => {
+  const carregarEmpresas = useCallback(async () => {
     const resultado = await API.listarEmpresas(filtros);
     if (resultado.sucesso) {
       setEmpresas(resultado.dados);
     } else {
       mostrarMensagem('erro', 'Erro ao carregar empresas');
     }
-  };
+  }, [filtros]);
 
   const mostrarMensagem = (tipo, texto) => {
     setMensagem({ tipo, texto, visivel: true });
