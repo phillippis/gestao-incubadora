@@ -326,7 +326,7 @@ export const desativarEmpresa = async (id, usuarioEmail, motivo = '') => {
 export const reativarEmpresa = async (id, usuarioEmail) => {
   try {
     // Obter dados da empresa desativada
-    const { data: desativada, error: erroObter } = await supabase
+    const { error: erroObter } = await supabase
       .from('empresas_desativadas')
       .select('dados_empresa')
       .eq('empresa_id', id)
