@@ -102,6 +102,20 @@ const GestaoIncubadora = () => {
     }
   };
 
+  const carregarEmpresas = async () => {
+    const resultado = await API.listarEmpresas(filtros);
+    if (resultado.sucesso) {
+      setEmpresas(resultado.dados);
+    } else {
+      mostrarMensagem('erro', 'Erro ao carregar empresas');
+    }
+  };
+
+  const mostrarMensagem = (tipo, texto) => {
+    setMensagem({ tipo, texto, visivel: true });
+    setTimeout(() => setMensagem({ ...mensagem, visivel: false }), 3000);
+  };
+
   const carregarEmpresas = useCallback(async () => {
     const resultado = await API.listarEmpresas(filtros);
     if (resultado.sucesso) {
@@ -109,12 +123,14 @@ const GestaoIncubadora = () => {
     } else {
       mostrarMensagem('erro', 'Erro ao carregar empresas');
     }
-  }, [filtros]);
+  }, [filtros, mensagem]);
 
-  const mostrarMensagem = (tipo, texto) => {
-    setMensagem({ tipo, texto, visivel: true });
-    setTimeout(() => setMensagem({ ...mensagem, visivel: false }), 3000);
-  };
+  // ==================== LIFECYCLE ====================
+  useEffect(() => {
+    if (usuario && ativaPagina === 'empresas') {
+      carregarEmpresas();
+    }
+  }, [ativaPagina, usuario, carregarEmpresas]);
 
   // ==================== FUNÇÕES DE NEGÓCIO ====================
   const adicionarEmpresa = async (dados) => {
