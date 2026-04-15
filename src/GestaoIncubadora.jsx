@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ChevronDown, LogOut, Upload, Plus, Filter, Search, Calendar, AlertCircle, CheckCircle, Clock } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import * as API from './supabaseClient';
 
 const GestaoIncubadora = () => {
@@ -58,10 +58,10 @@ const GestaoIncubadora = () => {
   }, []);
 
   useEffect(() => {
-    if (usuario && ativaPagina === 'empresas') {
-      carregarEmpresas();
-    }
-  }, [ativaPagina, filtros]);
+  if (usuario && ativaPagina === 'empresas') {
+    carregarEmpresas();
+  }
+}, [ativaPagina, filtros, usuario, carregarEmpresas]);
 
   const inicializarAplicacao = async () => {
     try {
