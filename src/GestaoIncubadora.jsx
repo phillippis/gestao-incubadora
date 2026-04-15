@@ -62,7 +62,7 @@ const GestaoIncubadora = () => {
     if (usuario && ativaPagina === 'empresas') {
       carregarEmpresas();
     }
-  }, [ativaPagina, filtros]);
+  }, [ativaPagina, usuario, carregarEmpresas]);
 
   const inicializarAplicacao = async () => {
     try {
@@ -109,7 +109,7 @@ const GestaoIncubadora = () => {
     } else {
       mostrarMensagem('erro', 'Erro ao carregar empresas');
     }
-  }, [filtros, mensagem]);
+  }, [filtros, mostrarMensagem]);
 
   const mostrarMensagem = (tipo, texto) => {
     setMensagem({ tipo, texto, visivel: true });
