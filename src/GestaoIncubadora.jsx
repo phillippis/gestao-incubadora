@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { ChevronDown } from 'lucide-react';
 import * as API from './supabaseClient';
 
@@ -53,9 +53,18 @@ const GestaoIncubadora = () => {
   ];
 
   // ==================== LIFECYCLE ====================
+  const carregarEmpresas = useCallback(async () => {
+    const resultado = await API.listarEmpresas(filtros);
+    if (resultado.sucesso) {
+      setEmpresas(resultado.dados);
+    } else {
+      mostrarMensagem('erro', 'Erro ao carregar empresas');
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filtros]);
+
   useEffect(() => {
     inicializarAplicacao();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -100,15 +109,6 @@ const GestaoIncubadora = () => {
     } catch (erro) {
       console.error('Erro ao carregar dados:', erro);
       mostrarMensagem('erro', 'Erro ao carregar dados');
-    }
-  };
-
-  const carregarEmpresas = async () => {
-    const resultado = await API.listarEmpresas(filtros);
-    if (resultado.sucesso) {
-      setEmpresas(resultado.dados);
-    } else {
-      mostrarMensagem('erro', 'Erro ao carregar empresas');
     }
   };
 
