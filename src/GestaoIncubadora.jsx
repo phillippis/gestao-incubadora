@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { ChevronDown, LogOut, Upload, Plus, Filter, Search, Calendar, AlertCircle, CheckCircle, Clock } from 'lucide-react';
 import * as API from './supabaseClient';
 
