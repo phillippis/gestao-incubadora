@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { ChevronDown, LogOut, Upload, Plus, Filter, Search, Calendar, AlertCircle, CheckCircle, Clock } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ChevronDown } from 'lucide-react';
 import * as API from './supabaseClient';
 
 const GestaoIncubadora = () => {
@@ -55,13 +55,15 @@ const GestaoIncubadora = () => {
   // ==================== LIFECYCLE ====================
   useEffect(() => {
     inicializarAplicacao();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     if (usuario && ativaPagina === 'empresas') {
       carregarEmpresas();
     }
-  }, [ativaPagina, filtros]);
+  }, [ativaPagina, usuario, carregarEmpresas]);
 
   const inicializarAplicacao = async () => {
     try {
@@ -101,13 +103,6 @@ const GestaoIncubadora = () => {
     }
   };
 
-
-
-  const mostrarMensagem = (tipo, texto) => {
-    setMensagem({ tipo, texto, visivel: true });
-    setTimeout(() => setMensagem({ ...mensagem, visivel: false }), 3000);
-  };
-
   const carregarEmpresas = async () => {
     const resultado = await API.listarEmpresas(filtros);
     if (resultado.sucesso) {
@@ -115,6 +110,11 @@ const GestaoIncubadora = () => {
     } else {
       mostrarMensagem('erro', 'Erro ao carregar empresas');
     }
+  };
+
+  const mostrarMensagem = (tipo, texto) => {
+    setMensagem({ tipo, texto, visivel: true });
+    setTimeout(() => setMensagem({ ...mensagem, visivel: false }), 3000);
   };
 
   // ==================== FUNÇÕES DE NEGÓCIO ====================
