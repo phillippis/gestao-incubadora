@@ -15,10 +15,14 @@ export const autenticar = async (email, senha) => {
       email,
       password: senha,
     });
-    
+
+    console.log('data:', data);
+    console.log('error:', error);
+
     if (error) throw error;
     return { sucesso: true, usuario: data.user, erro: null };
   } catch (erro) {
+    console.log('erro catch:', erro);
     return { sucesso: false, usuario: null, erro: erro.message };
   }
 };
