@@ -13,7 +13,7 @@ export const autenticar = async (email, senha) => {
   try {
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
-      senha,
+      password: senha,
     });
     
     if (error) throw error;
