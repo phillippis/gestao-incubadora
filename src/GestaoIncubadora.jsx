@@ -65,7 +65,7 @@ const GestaoIncubadora = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filtros]);
 
-  useEffect(() => { inicializarAplicacao(); /* eslint-disable-next-line */ }, []);
+  useEffect(() => { inicializarAplicacao(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (usuario && ativaPagina === 'empresas') carregarEmpresas();
@@ -352,7 +352,7 @@ const GestaoIncubadora = () => {
     const [loading, setLoading] = useState(true);
     const [tipoSelecionado, setTipoSelecionado] = useState('');
 
-    useEffect(() => { carregarControles(); }, []);
+    useEffect(() => { carregarControles(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     const carregarControles = async () => {
       setLoading(true);
