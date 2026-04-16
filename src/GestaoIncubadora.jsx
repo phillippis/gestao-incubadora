@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { ChevronDown, Plus, Trash2, CheckCircle, Clock, AlertTriangle, X } from 'lucide-react';
+import { ChevronDown, Plus, Trash2, CheckCircle, AlertTriangle, X } from 'lucide-react';
 import * as API from './supabaseClient';
 
 const CORES = {
@@ -403,30 +403,35 @@ const GestaoIncubadora = () => {
           </div>
         </div>
 
-        {/* Lista controles */}
+        {/* Lista controles com checkbox */}
         {loading ? (
           <p style={{ textAlign: 'center', color: CORES.textoSecundario }}>Carregando...</p>
         ) : controles.length === 0 ? (
           <p style={{ textAlign: 'center', color: CORES.textoSecundario, padding: 20 }}>Nenhum controle vinculado.</p>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {controles.map(c => (
-              <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: 'white', border: `1px solid ${c.status === 'pendente' ? CORES.perigo : CORES.bordas}`, borderRadius: 8 }}>
-                <button onClick={() => alternarStatus(c.id, c.status)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: c.status === 'ok' ? CORES.sucesso : CORES.perigo }}>
-                  {c.status === 'ok' ? <CheckCircle size={22} /> : <Clock size={22} />}
-                </button>
+              <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', background: c.status === 'ok' ? '#f0fdf4' : 'white', border: `1px solid ${c.status === 'ok' ? '#86efac' : CORES.perigo}`, borderRadius: 8, transition: 'all 0.15s' }}>
+                <input
+                  type="checkbox"
+                  checked={c.status === 'ok'}
+                  onChange={() => alternarStatus(c.id, c.status)}
+                  style={{ width: 20, height: 20, cursor: 'pointer', accentColor: CORES.sucesso, flexShrink: 0 }}
+                />
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: CORES.texto }}>{c.controles_tipos?.nome}</div>
-                  <div style={{ fontSize: 12, color: CORES.textoSecundario }}>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: CORES.texto, textDecoration: c.status === 'ok' ? 'line-through' : 'none', opacity: c.status === 'ok' ? 0.6 : 1 }}>
+                    {c.controles_tipos?.nome}
+                  </div>
+                  <div style={{ fontSize: 11, color: CORES.textoSecundario, marginTop: 1 }}>
                     {categoriaLabel[c.controles_tipos?.categoria]}
                     {c.controles_tipos?.mes_referencia && ` · ${c.controles_tipos.mes_referencia}`}
                   </div>
                 </div>
-                <span style={{ fontSize: 12, fontWeight: 600, color: c.status === 'ok' ? CORES.sucesso : CORES.perigo, background: c.status === 'ok' ? '#f0fdf4' : '#fef2f2', padding: '3px 10px', borderRadius: 20 }}>
-                  {c.status === 'ok' ? 'OK' : 'Pendente'}
+                <span style={{ fontSize: 11, fontWeight: 700, color: c.status === 'ok' ? CORES.sucesso : CORES.perigo, background: c.status === 'ok' ? '#dcfce7' : '#fef2f2', padding: '3px 10px', borderRadius: 20, flexShrink: 0 }}>
+                  {c.status === 'ok' ? '✓ OK' : 'Pendente'}
                 </span>
-                <button onClick={() => removerControle(c.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: CORES.textoSecundario, padding: 4 }}>
-                  <Trash2 size={15} />
+                <button onClick={() => removerControle(c.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: CORES.textoSecundario, padding: 4, flexShrink: 0 }}>
+                  <Trash2 size={14} />
                 </button>
               </div>
             ))}
@@ -665,6 +670,126 @@ const GestaoIncubadora = () => {
     );
   };
 
+  // ==================== CONTROLE EXPANSÍVEL (menu Controles) ====================
+  const ControleExpandivel = ({ controle, onExcluir }) => {
+    const [expandido, setExpandido] = useState(false);
+    const [empresasControle, setEmpresasControle] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [filtroStatus, setFiltroStatus] = useState('todos'); // 'todos' | 'ok' | 'pendente'
+
+    const categoriaLabel = { conta: '💰', capacitacao: '📚', notificacao: '📄' };
+
+    const carregarEmpresas = async () => {
+      if (empresasControle.length > 0) return; // já carregado
+      setLoading(true);
+      const r = await API.listarControlesEmpresaPorTipo(controle.id);
+      if (r.sucesso) setEmpresasControle(r.dados);
+      setLoading(false);
+    };
+
+    const handleExpandir = () => {
+      if (!expandido) carregarEmpresas();
+      setExpandido(!expandido);
+    };
+
+    const alternarStatus = async (ceId, statusAtual) => {
+      const novoStatus = statusAtual === 'ok' ? 'pendente' : 'ok';
+      const r = await API.atualizarStatusControle(ceId, novoStatus, '');
+      if (r.sucesso) {
+        setEmpresasControle(prev => prev.map(e => e.id === ceId ? { ...e, status: novoStatus } : e));
+        await carregarPendencias();
+      } else mostrarMsg('erro', r.erro);
+    };
+
+    const marcarTodos = async (novoStatus) => {
+      const alvos = empresasControle.filter(e => e.status !== novoStatus);
+      for (const e of alvos) {
+        await API.atualizarStatusControle(e.id, novoStatus, '');
+      }
+      setEmpresasControle(prev => prev.map(e => ({ ...e, status: novoStatus })));
+      await carregarPendencias();
+      mostrarMsg('sucesso', novoStatus === 'ok' ? 'Todos marcados como OK' : 'Todos marcados como Pendente');
+    };
+
+    const empresasFiltradas = empresasControle.filter(e => filtroStatus === 'todos' ? true : e.status === filtroStatus);
+    const totalOk = empresasControle.filter(e => e.status === 'ok').length;
+    const totalPendente = empresasControle.filter(e => e.status === 'pendente').length;
+
+    return (
+      <div style={{ background: 'white', border: `1px solid ${CORES.bordas}`, borderRadius: 10, overflow: 'hidden' }}>
+        {/* Cabeçalho clicável */}
+        <div onClick={handleExpandir} style={{ padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer', background: expandido ? CORES.fundo : 'white' }}>
+          <div style={{ fontSize: 22 }}>{categoriaLabel[controle.categoria]}</div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 600, fontSize: 15 }}>{controle.nome}</div>
+            <div style={{ fontSize: 12, color: CORES.textoSecundario, marginTop: 2, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+              <span>{controle.categoria === 'conta' ? 'Conta' : controle.categoria === 'capacitacao' ? 'Capacitação' : 'Notificação'}</span>
+              {controle.mes_referencia && <span>· {controle.mes_referencia}</span>}
+              {controle.para_todos && <span style={{ background: '#eff6ff', color: CORES.principal, padding: '1px 8px', borderRadius: 20, fontSize: 11, fontWeight: 600 }}>Todas as empresas</span>}
+              {empresasControle.length > 0 && (
+                <>
+                  <span style={{ color: CORES.sucesso, fontWeight: 600 }}>✓ {totalOk} OK</span>
+                  {totalPendente > 0 && <span style={{ color: CORES.perigo, fontWeight: 600 }}>⚠ {totalPendente} pendente{totalPendente > 1 ? 's' : ''}</span>}
+                </>
+              )}
+            </div>
+          </div>
+          <Btn small cor={CORES.perigo} onClick={e => { e.stopPropagation(); onExcluir(controle.id); }}><Trash2 size={13} /> Excluir</Btn>
+          <ChevronDown size={18} color={CORES.textoSecundario} style={{ transform: expandido ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0 }} />
+        </div>
+
+        {/* Conteúdo expandido */}
+        {expandido && (
+          <div style={{ borderTop: `1px solid ${CORES.bordas}`, padding: 16 }}>
+            {/* Barra de ações */}
+            <div style={{ display: 'flex', gap: 8, marginBottom: 14, alignItems: 'center', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 13, color: CORES.textoSecundario, marginRight: 4 }}>Filtrar:</span>
+              {['todos', 'ok', 'pendente'].map(f => (
+                <button key={f} onClick={() => setFiltroStatus(f)} style={{ padding: '4px 12px', borderRadius: 20, border: `1px solid ${filtroStatus === f ? CORES.principal : CORES.bordas}`, background: filtroStatus === f ? CORES.principal : 'white', color: filtroStatus === f ? 'white' : CORES.textoSecundario, cursor: 'pointer', fontSize: 12, fontWeight: filtroStatus === f ? 600 : 400 }}>
+                  {f === 'todos' ? 'Todos' : f === 'ok' ? '✓ OK' : '⚠ Pendente'}
+                </button>
+              ))}
+              <div style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
+                <Btn small cor={CORES.sucesso} onClick={() => marcarTodos('ok')}>✓ Marcar todos OK</Btn>
+                <Btn small cor={CORES.perigo} outline onClick={() => marcarTodos('pendente')}>Resetar todos</Btn>
+              </div>
+            </div>
+
+            {loading ? (
+              <p style={{ textAlign: 'center', color: CORES.textoSecundario, padding: 16 }}>Carregando...</p>
+            ) : empresasFiltradas.length === 0 ? (
+              <p style={{ textAlign: 'center', color: CORES.textoSecundario, padding: 16 }}>
+                {filtroStatus === 'todos' ? 'Nenhuma empresa vinculada.' : `Nenhuma empresa com status "${filtroStatus === 'ok' ? 'OK' : 'Pendente'}".`}
+              </p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {empresasFiltradas.map(e => (
+                  <div key={e.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', background: e.status === 'ok' ? '#f0fdf4' : '#fef9f9', border: `1px solid ${e.status === 'ok' ? '#86efac' : '#fecaca'}`, borderRadius: 8 }}>
+                    <input
+                      type="checkbox"
+                      checked={e.status === 'ok'}
+                      onChange={() => alternarStatus(e.id, e.status)}
+                      style={{ width: 18, height: 18, cursor: 'pointer', accentColor: CORES.sucesso, flexShrink: 0 }}
+                    />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: CORES.texto, textDecoration: e.status === 'ok' ? 'line-through' : 'none', opacity: e.status === 'ok' ? 0.6 : 1 }}>
+                        {e.empresas?.nome_empresa || '—'}
+                      </div>
+                      {e.empresas?.boxes_numeros && <div style={{ fontSize: 11, color: CORES.textoSecundario }}>Box {e.empresas.boxes_numeros}</div>}
+                    </div>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: e.status === 'ok' ? CORES.sucesso : CORES.perigo, background: e.status === 'ok' ? '#dcfce7' : '#fee2e2', padding: '3px 10px', borderRadius: 20, flexShrink: 0 }}>
+                      {e.status === 'ok' ? '✓ OK' : 'Pendente'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   // ==================== GESTÃO DE CONTROLES ====================
   const GestaoControles = () => {
     const [mostrarForm, setMostrarForm] = useState(false);
@@ -758,18 +883,7 @@ const GestaoIncubadora = () => {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {controlesTipos.map(c => (
-              <div key={c.id} style={{ background: 'white', border: `1px solid ${CORES.bordas}`, borderRadius: 10, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14 }}>
-                <div style={{ fontSize: 24 }}>{categoriaLabel[c.categoria]}</div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 600, fontSize: 15 }}>{c.nome}</div>
-                  <div style={{ fontSize: 12, color: CORES.textoSecundario, marginTop: 2 }}>
-                    {c.categoria === 'conta' ? 'Conta' : c.categoria === 'capacitacao' ? 'Capacitação' : 'Notificação'}
-                    {c.mes_referencia && ` · ${c.mes_referencia}`}
-                    {c.para_todos && <span style={{ marginLeft: 8, background: '#eff6ff', color: CORES.principal, padding: '1px 8px', borderRadius: 20, fontSize: 11, fontWeight: 600 }}>Todas as empresas</span>}
-                  </div>
-                </div>
-                <Btn small cor={CORES.perigo} onClick={() => excluirControleTipo(c.id)}><Trash2 size={13} /> Excluir</Btn>
-              </div>
+              <ControleExpandivel key={c.id} controle={c} onExcluir={excluirControleTipo} />
             ))}
           </div>
         )}
