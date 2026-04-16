@@ -655,7 +655,7 @@ export const criarBoxCadastro = async (dados) => {
   try {
     const { data, error } = await supabase
       .from('boxes_cadastro')
-      .insert([{ numero: dados.numero, endereco: dados.endereco, observacoes: dados.observacoes, ativo: true }])
+      .insert([{ numero: dados.numero, endereco: dados.endereco, observacoes: dados.observacoes, incubadora_id: dados.incubadoraId || null, ativo: true }])
       .select().single();
     if (error) throw error;
     return { sucesso: true, dados: data, erro: null };
@@ -668,7 +668,7 @@ export const atualizarBoxCadastro = async (id, dados) => {
   try {
     const { error } = await supabase
       .from('boxes_cadastro')
-      .update({ numero: dados.numero, endereco: dados.endereco, observacoes: dados.observacoes })
+      .update({ numero: dados.numero, endereco: dados.endereco, observacoes: dados.observacoes, incubadora_id: dados.incubadoraId || null })
       .eq('id', id);
     if (error) throw error;
     return { sucesso: true, erro: null };
@@ -835,5 +835,60 @@ export const listarControlesEmpresaPorTipo = async (controleTipoId) => {
     return { sucesso: true, dados: data, erro: null };
   } catch (erro) {
     return { sucesso: false, dados: [], erro: erro.message };
+  }
+};
+
+// ==================== FUNÇÕES DE INCUBADORAS ====================
+
+export const listarIncubadoras = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('incubadoras')
+      .select('*')
+      .eq('ativo', true)
+      .order('numero');
+    if (error) throw error;
+    return { sucesso: true, dados: data, erro: null };
+  } catch (erro) {
+    return { sucesso: false, dados: [], erro: erro.message };
+  }
+};
+
+export const criarIncubadora = async (dados) => {
+  try {
+    const { data, error } = await supabase
+      .from('incubadoras')
+      .insert([{ numero: dados.numero, endereco: dados.endereco, observacoes: dados.observacoes, incubadora_id: dados.incubadoraId || null, ativo: true }])
+      .select().single();
+    if (error) throw error;
+    return { sucesso: true, dados: data, erro: null };
+  } catch (erro) {
+    return { sucesso: false, dados: null, erro: erro.message };
+  }
+};
+
+export const atualizarIncubadora = async (id, dados) => {
+  try {
+    const { error } = await supabase
+      .from('incubadoras')
+      .update({ numero: dados.numero, endereco: dados.endereco, observacoes: dados.observacoes })
+      .eq('id', id);
+    if (error) throw error;
+    return { sucesso: true, erro: null };
+  } catch (erro) {
+    return { sucesso: false, erro: erro.message };
+  }
+};
+
+export const excluirIncubadora = async (id) => {
+  try {
+    const { error } = await supabase
+      .from('incubadoras')
+      .update({ ativo: false })
+      .eq('id', id);
+    if (error) throw error;
+    return { sucesso: true, erro: null };
+  } catch (erro) {
+    return { sucesso: false, erro: erro.message };
   }
 };
