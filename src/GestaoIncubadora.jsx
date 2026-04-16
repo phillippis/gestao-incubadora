@@ -871,7 +871,7 @@ const GestaoIncubadora = () => {
               <div style={{ display: 'flex', gap: 6, background: CORES.fundo, padding: 5, borderRadius: 8 }}>
                 {['todos', 'disponivel', 'ocupado'].map(f => (
                   <button key={f} onClick={() => setFiltroBoxStatus(f)} style={{ padding: '5px 14px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: filtroBoxStatus === f ? 700 : 400, background: filtroBoxStatus === f ? CORES.principal : 'transparent', color: filtroBoxStatus === f ? 'white' : CORES.textoSecundario }}>
-                    {f === 'todos' ? 'Todos' : f === 'disponivel' ? '🟢 Disponíveis' : '🔵 Ocupados'}
+                    {f === 'todos' ? 'Todos' : f === 'disponivel' ? '🟢 Disponíveis' : '🔴 Ocupados'}
                   </button>
                 ))}
               </div>
@@ -940,11 +940,11 @@ const GestaoIncubadora = () => {
                         : null;
 
                       return (
-                        <div key={b.id} style={{ background: 'white', border: `2px solid ${ocupado ? CORES.bordas : CORES.sucesso}`, borderRadius: 10, padding: 14, position: 'relative' }}>
-                          {/* Badge status */}
-                          <div style={{ position: 'absolute', top: 10, right: 10, display: 'flex', gap: 4 }}>
-                            <Btn small outline cor={CORES.principal} onClick={() => abrirEdicaoBox(b)}>✏</Btn>
-                            <Btn small cor={CORES.perigo} onClick={() => excluirBox(b.id)}><Trash2 size={12} /></Btn>
+                        <div key={b.id} style={{ background: 'white', border: `2px solid ${ocupado ? '#fecaca' : CORES.sucesso}`, borderRadius: 10, padding: '12px 12px 10px', position: 'relative' }}>
+                          {/* Botões editar/excluir box */}
+                          <div style={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: 3 }}>
+                            <button onClick={e => { e.stopPropagation(); abrirEdicaoBox(b); }} title="Editar box" style={{ background: 'none', border: `1px solid ${CORES.bordas}`, borderRadius: 4, cursor: 'pointer', padding: '2px 6px', fontSize: 12, color: CORES.textoSecundario }}>✏</button>
+                            <button onClick={e => { e.stopPropagation(); excluirBox(b.id); }} title="Excluir box" style={{ background: CORES.perigo, border: 'none', borderRadius: 4, cursor: 'pointer', padding: '2px 6px', fontSize: 12, color: 'white' }}>✕</button>
                           </div>
 
                           {/* Número do box — clicável */}
@@ -952,29 +952,31 @@ const GestaoIncubadora = () => {
                             onClick={() => {
                               if (ocupado && empresaDoBox) {
                                 setEmpresaEmEdicao(empresaDoBox);
+                                setAtivaPagina('empresas');
                               } else {
                                 setBoxPreSelecionado({ numero: b.numero, incubadoraId: b.incubadora_id });
                                 setMostrarFormulario(true);
+                                setAtivaPagina('empresas');
                               }
                             }}
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'left' }}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'left', display: 'block', width: '100%' }}
                           >
-                            <div style={{ fontWeight: 800, fontSize: 22, color: ocupado ? CORES.principal : CORES.sucesso, marginBottom: 4 }}>
-                              Box {b.numero}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                              <span style={{ fontWeight: 800, fontSize: 15, color: ocupado ? CORES.perigo : CORES.sucesso }}>
+                                Box {b.numero}
+                              </span>
+                              <span style={{ width: 8, height: 8, borderRadius: '50%', background: ocupado ? CORES.perigo : CORES.sucesso, display: 'inline-block', flexShrink: 0 }} />
                             </div>
+                            {empresaDoBox ? (
+                              <div style={{ fontSize: 11, color: CORES.textoSecundario, lineHeight: 1.4 }}>
+                                {empresaDoBox.nome_empresa}
+                              </div>
+                            ) : (
+                              <div style={{ fontSize: 11, color: CORES.sucesso, fontWeight: 600 }}>Disponível</div>
+                            )}
                           </button>
 
-                          <div style={{ display: 'inline-block', background: ocupado ? '#eff6ff' : '#f0fdf4', color: ocupado ? CORES.principal : CORES.sucesso, borderRadius: 20, padding: '2px 8px', fontSize: 11, fontWeight: 700, marginBottom: 6 }}>
-                            {ocupado ? '🔵 Ocupado' : '🟢 Disponível'}
-                          </div>
-
-                          {empresaDoBox && (
-                            <div style={{ fontSize: 12, color: CORES.textoSecundario, marginTop: 4 }}>
-                              {empresaDoBox.atividade || empresaDoBox.nome_empresa}
-                            </div>
-                          )}
-
-                          {b.observacoes && <div style={{ fontSize: 11, color: CORES.textoSecundario, fontStyle: 'italic', marginTop: 4 }}>{b.observacoes}</div>}
+                          {b.observacoes && <div style={{ fontSize: 10, color: CORES.textoSecundario, fontStyle: 'italic', marginTop: 4 }}>{b.observacoes}</div>}
                         </div>
                       );
                     })}
