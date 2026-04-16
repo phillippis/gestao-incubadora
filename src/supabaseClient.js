@@ -892,3 +892,58 @@ export const excluirIncubadora = async (id) => {
     return { sucesso: false, erro: erro.message };
   }
 };
+
+// ==================== GESTÃO DE BOXES DA EMPRESA ====================
+
+export const listarBoxesDeEmpresa = async (empresaId) => {
+  try {
+    const { data, error } = await supabase
+      .from('boxes')
+      .select('*')
+      .eq('empresa_id', empresaId)
+      .eq('ativo', true)
+      .order('numero');
+    if (error) throw error;
+    return { sucesso: true, dados: data, erro: null };
+  } catch (erro) {
+    return { sucesso: false, dados: [], erro: erro.message };
+  }
+};
+
+export const alterarBoxEmpresa = async (boxId, novoNumero) => {
+  try {
+    const { error } = await supabase
+      .from('boxes')
+      .update({ numero: novoNumero })
+      .eq('id', boxId);
+    if (error) throw error;
+    return { sucesso: true, erro: null };
+  } catch (erro) {
+    return { sucesso: false, erro: erro.message };
+  }
+};
+
+export const removerBoxEmpresa = async (boxId) => {
+  try {
+    const { error } = await supabase
+      .from('boxes')
+      .update({ ativo: false, data_saida: new Date().toISOString().split('T')[0] })
+      .eq('id', boxId);
+    if (error) throw error;
+    return { sucesso: true, erro: null };
+  } catch (erro) {
+    return { sucesso: false, erro: erro.message };
+  }
+};
+
+export const adicionarBoxEmpresa = async (empresaId, numero) => {
+  try {
+    const { error } = await supabase
+      .from('boxes')
+      .insert([{ empresa_id: empresaId, numero, data_entrada: new Date().toISOString().split('T')[0], ativo: true }]);
+    if (error) throw error;
+    return { sucesso: true, erro: null };
+  } catch (erro) {
+    return { sucesso: false, erro: erro.message };
+  }
+};
