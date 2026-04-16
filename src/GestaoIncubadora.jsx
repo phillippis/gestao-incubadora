@@ -42,6 +42,7 @@ const GestaoIncubadora = () => {
   const [empresasDesativadas, setEmpresasDesativadas] = useState([]);
   const [kpis, setKpis] = useState(null);
   const [tempoIncubadora, setTempoIncubadora] = useState([]);
+  const [incubadoras, setIncubadoras] = useState([]);
   const [boxesCadastro, setBoxesCadastro] = useState([]);
   const [controlesTipos, setControlesTipos] = useState([]);
   const [empresasComPendencias, setEmpresasComPendencias] = useState([]);
@@ -107,8 +108,12 @@ const GestaoIncubadora = () => {
   };
 
   const carregarBoxes = async () => {
-    const r = await API.listarBoxesCadastro();
-    if (r.sucesso) setBoxesCadastro(r.dados);
+    const [rBoxes, rIncubadoras] = await Promise.all([
+      API.listarBoxesCadastro(),
+      API.listarIncubadoras()
+    ]);
+    if (rBoxes.sucesso) setBoxesCadastro(rBoxes.dados);
+    if (rIncubadoras.sucesso) setIncubadoras(rIncubadoras.dados);
   };
 
   const carregarControlesTipos = async () => {
@@ -335,7 +340,11 @@ const GestaoIncubadora = () => {
             <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
               <Select value={box.numero} onChange={e => handleBoxChange(i, 'numero', e.target.value)} style={{ flex: '0 0 160px' }}>
                 <option value="">Box...</option>
-                {boxesCadastro.map(b => <option key={b.id} value={b.numero}>Box {b.numero}{b.endereco ? ` — ${b.endereco}` : ''}</option>)}
+                {boxesCadastro.map(b => {
+                  const inc = incubadoras.find(i => i.id === b.incubadora_id);
+                  const label = inc ? `Incubadora ${inc.numero} — Box ${b.numero}` : `Box ${b.numero}`;
+                  return <option key={b.id} value={b.numero}>{label}</option>;
+                })}
               </Select>
               <Input type="date" value={box.dataEntrada} onChange={e => handleBoxChange(i, 'dataEntrada', e.target.value)} style={{ flex: 1 }} />
               {form.boxes.length > 1 && (
@@ -616,63 +625,169 @@ const GestaoIncubadora = () => {
 
   // ==================== GESTÃO DE BOXES ====================
   const GestaoBoxes = () => {
+    const [aba, setAba] = useState('incubadoras'); // 'incubadoras' | 'boxes'
     const [mostrarForm, setMostrarForm] = useState(false);
-    const [boxEmEdicao, setBoxEmEdicao] = useState(null);
-    const [form, setForm] = useState({ numero: '', endereco: '', observacoes: '' });
+    const [itemEmEdicao, setItemEmEdicao] = useState(null);
+    const [form, setForm] = useState({});
 
-    const abrirNovo = () => { setForm({ numero: '', endereco: '', observacoes: '' }); setBoxEmEdicao(null); setMostrarForm(true); };
-    const abrirEdicao = (b) => { setForm({ numero: b.numero, endereco: b.endereco || '', observacoes: b.observacoes || '' }); setBoxEmEdicao(b); setMostrarForm(true); };
-    const salvar = async () => {
+    // --- Incubadoras ---
+    const abrirNovaIncubadora = () => { setForm({ numero: '', endereco: '', observacoes: '' }); setItemEmEdicao(null); setMostrarForm(true); };
+    const abrirEdicaoIncubadora = (i) => { setForm({ numero: i.numero, endereco: i.endereco || '', observacoes: i.observacoes || '' }); setItemEmEdicao(i); setMostrarForm(true); };
+    const salvarIncubadora = async () => {
+      if (!form.numero) { mostrarMsg('erro', 'Número da incubadora é obrigatório'); return; }
+      const r = itemEmEdicao ? await API.atualizarIncubadora(itemEmEdicao.id, form) : await API.criarIncubadora(form);
+      if (r.sucesso) { mostrarMsg('sucesso', itemEmEdicao ? 'Incubadora atualizada' : 'Incubadora criada'); await carregarBoxes(); setMostrarForm(false); }
+      else mostrarMsg('erro', r.erro);
+    };
+    const excluirIncubadoraLocal = async (id) => {
+      if (!window.confirm('Excluir esta incubadora?')) return;
+      const r = await API.excluirIncubadora(id);
+      if (r.sucesso) { mostrarMsg('sucesso', 'Incubadora excluída'); await carregarBoxes(); }
+      else mostrarMsg('erro', r.erro);
+    };
+
+    // --- Boxes ---
+    const abrirNovoBox = () => { setForm({ numero: '', incubadoraId: '', observacoes: '' }); setItemEmEdicao(null); setMostrarForm(true); };
+    const abrirEdicaoBox = (b) => { setForm({ numero: b.numero, incubadoraId: b.incubadora_id || '', observacoes: b.observacoes || '' }); setItemEmEdicao(b); setMostrarForm(true); };
+    const salvarBox2 = async () => {
       if (!form.numero) { mostrarMsg('erro', 'Número do box é obrigatório'); return; }
-      await salvarBox(form, boxEmEdicao?.id);
+      if (!form.incubadoraId) { mostrarMsg('erro', 'Selecione uma incubadora'); return; }
+      await salvarBox(form, itemEmEdicao?.id);
       setMostrarForm(false);
     };
 
+    const TabBtn = ({ id, label }) => (
+      <button onClick={() => { setAba(id); setMostrarForm(false); }} style={{ padding: '8px 20px', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 14, background: aba === id ? CORES.principal : CORES.fundo, color: aba === id ? 'white' : CORES.textoSecundario }}>
+        {label}
+      </button>
+    );
+
     return (
       <div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 22 }}>
-          <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700 }}>Boxes</h1>
-          <Btn onClick={abrirNovo}><Plus size={16} /> Novo Box</Btn>
+        <h1 style={{ marginBottom: 20, fontSize: 24, fontWeight: 700 }}>Boxes & Incubadoras</h1>
+
+        {/* Abas */}
+        <div style={{ display: 'flex', gap: 8, marginBottom: 22, background: CORES.fundo, padding: 6, borderRadius: 10, width: 'fit-content' }}>
+          <TabBtn id="incubadoras" label="🏭 Incubadoras" />
+          <TabBtn id="boxes" label="📦 Boxes" />
         </div>
 
-        {mostrarForm && (
-          <Modal titulo={boxEmEdicao ? 'Editar Box' : 'Novo Box'} onFechar={() => setMostrarForm(false)} largura={480}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <Input label="Número do Box *" type="number" value={form.numero} onChange={e => setForm({ ...form, numero: e.target.value })} placeholder="Ex: 1, 2, 3..." />
-              <Input label="Endereço" value={form.endereco} onChange={e => setForm({ ...form, endereco: e.target.value })} placeholder="Ex: Rua das Flores, 123" />
-              <div>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: CORES.textoSecundario, marginBottom: 4 }}>Observações</label>
-                <textarea value={form.observacoes} onChange={e => setForm({ ...form, observacoes: e.target.value })} rows={3} style={{ width: '100%', padding: '8px 10px', border: `1px solid ${CORES.bordas}`, borderRadius: 6, fontSize: 14, boxSizing: 'border-box', resize: 'vertical' }} />
-              </div>
+        {/* ---- ABA INCUBADORAS ---- */}
+        {aba === 'incubadoras' && (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
+              <Btn onClick={abrirNovaIncubadora}><Plus size={16} /> Nova Incubadora</Btn>
             </div>
-            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 20 }}>
-              <Btn outline cor={CORES.principal} onClick={() => setMostrarForm(false)}>Cancelar</Btn>
-              <Btn onClick={salvar}>{boxEmEdicao ? 'Salvar' : 'Criar Box'}</Btn>
-            </div>
-          </Modal>
-        )}
 
-        {boxesCadastro.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: 40, color: CORES.textoSecundario, background: CORES.fundo, borderRadius: 10 }}>
-            Nenhum box cadastrado. Clique em "Novo Box" para começar.
-          </div>
-        ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 14 }}>
-            {boxesCadastro.map(b => (
-              <div key={b.id} style={{ background: 'white', border: `1px solid ${CORES.bordas}`, borderRadius: 10, padding: 18 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
-                  <div style={{ background: CORES.principal, color: 'white', borderRadius: 8, padding: '6px 14px', fontWeight: 700, fontSize: 18 }}>
-                    Box {b.numero}
-                  </div>
-                  <div style={{ display: 'flex', gap: 6 }}>
-                    <Btn small outline cor={CORES.principal} onClick={() => abrirEdicao(b)}>Editar</Btn>
-                    <Btn small cor={CORES.perigo} onClick={() => excluirBox(b.id)}><Trash2 size={13} /></Btn>
+            {mostrarForm && (
+              <Modal titulo={itemEmEdicao ? 'Editar Incubadora' : 'Nova Incubadora'} onFechar={() => setMostrarForm(false)} largura={460}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  <Input label="Número da Incubadora *" type="number" value={form.numero} onChange={e => setForm({ ...form, numero: e.target.value })} placeholder="Ex: 1, 2, 3..." />
+                  <Input label="Endereço (Rua)" value={form.endereco || ''} onChange={e => setForm({ ...form, endereco: e.target.value })} placeholder="Ex: Rua das Flores, 123" />
+                  <div>
+                    <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: CORES.textoSecundario, marginBottom: 4 }}>Observações</label>
+                    <textarea value={form.observacoes || ''} onChange={e => setForm({ ...form, observacoes: e.target.value })} rows={3} style={{ width: '100%', padding: '8px 10px', border: `1px solid ${CORES.bordas}`, borderRadius: 6, fontSize: 14, boxSizing: 'border-box', resize: 'vertical' }} />
                   </div>
                 </div>
-                {b.endereco && <div style={{ fontSize: 13, color: CORES.textoSecundario, marginBottom: 6 }}>📍 {b.endereco}</div>}
-                {b.observacoes && <div style={{ fontSize: 12, color: CORES.textoSecundario, fontStyle: 'italic' }}>{b.observacoes}</div>}
+                <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 20 }}>
+                  <Btn outline cor={CORES.principal} onClick={() => setMostrarForm(false)}>Cancelar</Btn>
+                  <Btn onClick={salvarIncubadora}>{itemEmEdicao ? 'Salvar' : 'Criar Incubadora'}</Btn>
+                </div>
+              </Modal>
+            )}
+
+            {incubadoras.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: 40, color: CORES.textoSecundario, background: CORES.fundo, borderRadius: 10 }}>Nenhuma incubadora cadastrada.</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {incubadoras.map(inc => {
+                  const boxesDaInc = boxesCadastro.filter(b => b.incubadora_id === inc.id);
+                  return (
+                    <div key={inc.id} style={{ background: 'white', border: `1px solid ${CORES.bordas}`, borderRadius: 10, padding: 18 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: 18, color: CORES.principal }}>Incubadora {inc.numero}</div>
+                          {inc.endereco && <div style={{ fontSize: 13, color: CORES.textoSecundario, marginTop: 3 }}>📍 {inc.endereco}</div>}
+                          {inc.observacoes && <div style={{ fontSize: 12, color: CORES.textoSecundario, fontStyle: 'italic', marginTop: 3 }}>{inc.observacoes}</div>}
+                        </div>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <Btn small outline cor={CORES.principal} onClick={() => abrirEdicaoIncubadora(inc)}>Editar</Btn>
+                          <Btn small cor={CORES.perigo} onClick={() => excluirIncubadoraLocal(inc.id)}><Trash2 size={13} /></Btn>
+                        </div>
+                      </div>
+                      {boxesDaInc.length > 0 && (
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
+                          {boxesDaInc.map(b => (
+                            <span key={b.id} style={{ background: CORES.fundo, border: `1px solid ${CORES.bordas}`, borderRadius: 6, padding: '3px 10px', fontSize: 12, fontWeight: 600, color: CORES.textoSecundario }}>
+                              Box {b.numero}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
-            ))}
+            )}
+          </div>
+        )}
+
+        {/* ---- ABA BOXES ---- */}
+        {aba === 'boxes' && (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
+              <Btn onClick={abrirNovoBox} disabled={incubadoras.length === 0}><Plus size={16} /> Novo Box</Btn>
+            </div>
+            {incubadoras.length === 0 && (
+              <div style={{ background: '#fffbeb', border: `1px solid ${CORES.aviso}`, borderRadius: 8, padding: 14, marginBottom: 16, fontSize: 13, color: '#92400e' }}>
+                ⚠ Cadastre pelo menos uma incubadora antes de adicionar boxes.
+              </div>
+            )}
+
+            {mostrarForm && (
+              <Modal titulo={itemEmEdicao ? 'Editar Box' : 'Novo Box'} onFechar={() => setMostrarForm(false)} largura={460}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  <Select label="Incubadora *" value={form.incubadoraId} onChange={e => setForm({ ...form, incubadoraId: e.target.value })}>
+                    <option value="">Selecione a incubadora...</option>
+                    {incubadoras.map(i => <option key={i.id} value={i.id}>Incubadora {i.numero}{i.endereco ? ` — ${i.endereco}` : ''}</option>)}
+                  </Select>
+                  <Input label="Número do Box *" type="number" value={form.numero} onChange={e => setForm({ ...form, numero: e.target.value })} placeholder="Ex: 1, 2, 3..." />
+                  <div>
+                    <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: CORES.textoSecundario, marginBottom: 4 }}>Observações</label>
+                    <textarea value={form.observacoes || ''} onChange={e => setForm({ ...form, observacoes: e.target.value })} rows={3} style={{ width: '100%', padding: '8px 10px', border: `1px solid ${CORES.bordas}`, borderRadius: 6, fontSize: 14, boxSizing: 'border-box', resize: 'vertical' }} />
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 20 }}>
+                  <Btn outline cor={CORES.principal} onClick={() => setMostrarForm(false)}>Cancelar</Btn>
+                  <Btn onClick={salvarBox2}>{itemEmEdicao ? 'Salvar' : 'Criar Box'}</Btn>
+                </div>
+              </Modal>
+            )}
+
+            {boxesCadastro.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: 40, color: CORES.textoSecundario, background: CORES.fundo, borderRadius: 10 }}>Nenhum box cadastrado.</div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 12 }}>
+                {boxesCadastro.map(b => {
+                  const inc = incubadoras.find(i => i.id === b.incubadora_id);
+                  return (
+                    <div key={b.id} style={{ background: 'white', border: `1px solid ${CORES.bordas}`, borderRadius: 10, padding: 16 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: 16, color: CORES.principal }}>Box {b.numero}</div>
+                          {inc && <div style={{ fontSize: 12, color: CORES.textoSecundario, marginTop: 2 }}>Incubadora {inc.numero}</div>}
+                        </div>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <Btn small outline cor={CORES.principal} onClick={() => abrirEdicaoBox(b)}>Editar</Btn>
+                          <Btn small cor={CORES.perigo} onClick={() => excluirBox(b.id)}><Trash2 size={13} /></Btn>
+                        </div>
+                      </div>
+                      {b.observacoes && <div style={{ fontSize: 12, color: CORES.textoSecundario, fontStyle: 'italic' }}>{b.observacoes}</div>}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
       </div>
