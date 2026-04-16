@@ -34,6 +34,50 @@ const formatarTempo = (tempo) => {
   return `${anos} ${anos === 1 ? 'ano' : 'anos'} e ${meses} ${meses === 1 ? 'mês' : 'meses'}`;
 };
 
+// ==================== COMPONENTES BASE (fora do componente principal para evitar re-mount) ====================
+const Input = ({ label, ...props }) => (
+  <div>
+    {label && <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: CORES.textoSecundario, marginBottom: 4 }}>{label}</label>}
+    <input {...props} style={{ width: '100%', padding: '8px 10px', border: `1px solid ${CORES.bordas}`, borderRadius: 6, fontSize: 14, boxSizing: 'border-box', ...props.style }} />
+  </div>
+);
+
+const Select = ({ label, children, ...props }) => (
+  <div>
+    {label && <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: CORES.textoSecundario, marginBottom: 4 }}>{label}</label>}
+    <select {...props} style={{ width: '100%', padding: '8px 10px', border: `1px solid ${CORES.bordas}`, borderRadius: 6, fontSize: 14, boxSizing: 'border-box', background: 'white', ...props.style }}>
+      {children}
+    </select>
+  </div>
+);
+
+const Btn = ({ children, cor = CORES.principal, outline, small, ...props }) => (
+  <button {...props} style={{
+    background: outline ? 'transparent' : (props.disabled ? CORES.textoSecundario : cor),
+    color: outline ? cor : 'white',
+    border: outline ? `1px solid ${cor}` : 'none',
+    padding: small ? '5px 12px' : '9px 18px',
+    borderRadius: 6, cursor: props.disabled ? 'not-allowed' : 'pointer',
+    fontSize: small ? 12 : 14, fontWeight: 500,
+    display: 'inline-flex', alignItems: 'center', gap: 6,
+    ...props.style
+  }}>
+    {children}
+  </button>
+);
+
+const Modal = ({ titulo, onFechar, children, largura = 600 }) => (
+  <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+    <div style={{ background: 'white', borderRadius: 10, width: '92%', maxWidth: largura, maxHeight: '92vh', overflow: 'auto', padding: 28 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 22 }}>
+        <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: CORES.texto }}>{titulo}</h2>
+        <button onClick={onFechar} style={{ background: 'none', border: 'none', cursor: 'pointer', color: CORES.textoSecundario, padding: 4 }}><X size={20} /></button>
+      </div>
+      {children}
+    </div>
+  </div>
+);
+
 const GestaoIncubadora = () => {
   const [usuario, setUsuario] = useState(null);
   const [carregando, setCarregando] = useState(true);
@@ -210,48 +254,6 @@ const GestaoIncubadora = () => {
     );
   };
 
-  const Input = ({ label, ...props }) => (
-    <div>
-      {label && <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: CORES.textoSecundario, marginBottom: 4 }}>{label}</label>}
-      <input {...props} style={{ width: '100%', padding: '8px 10px', border: `1px solid ${CORES.bordas}`, borderRadius: 6, fontSize: 14, boxSizing: 'border-box', ...props.style }} />
-    </div>
-  );
-
-  const Select = ({ label, children, ...props }) => (
-    <div>
-      {label && <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: CORES.textoSecundario, marginBottom: 4 }}>{label}</label>}
-      <select {...props} style={{ width: '100%', padding: '8px 10px', border: `1px solid ${CORES.bordas}`, borderRadius: 6, fontSize: 14, boxSizing: 'border-box', background: 'white', ...props.style }}>
-        {children}
-      </select>
-    </div>
-  );
-
-  const Btn = ({ children, cor = CORES.principal, outline, small, ...props }) => (
-    <button {...props} style={{
-      background: outline ? 'transparent' : (props.disabled ? CORES.textoSecundario : cor),
-      color: outline ? cor : 'white',
-      border: outline ? `1px solid ${cor}` : 'none',
-      padding: small ? '5px 12px' : '9px 18px',
-      borderRadius: 6, cursor: props.disabled ? 'not-allowed' : 'pointer',
-      fontSize: small ? 12 : 14, fontWeight: 500,
-      display: 'inline-flex', alignItems: 'center', gap: 6,
-      ...props.style
-    }}>
-      {children}
-    </button>
-  );
-
-  const Modal = ({ titulo, onFechar, children, largura = 600 }) => (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-      <div style={{ background: 'white', borderRadius: 10, width: '92%', maxWidth: largura, maxHeight: '92vh', overflow: 'auto', padding: 28 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 22 }}>
-          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: CORES.texto }}>{titulo}</h2>
-          <button onClick={onFechar} style={{ background: 'none', border: 'none', cursor: 'pointer', color: CORES.textoSecundario, padding: 4 }}><X size={20} /></button>
-        </div>
-        {children}
-      </div>
-    </div>
-  );
 
   // ==================== TELA LOGIN ====================
   const TelaLogin = () => {
@@ -1179,7 +1181,7 @@ const GestaoIncubadora = () => {
 
       <div style={{ display: 'flex', minHeight: 'calc(100vh - 58px)' }}>
         {/* Sidebar */}
-        <div style={{ width: 200, background: 'white', borderRight: `1px solid ${CORES.bordas}`, padding: '20px 0', flexShrink: 0 }}>
+        <div style={{ width: 200, background: 'white', borderRight: `1px solid ${CORES.bordas}`, padding: '20px 0', flexShrink: 0, position: 'sticky', top: 58, height: 'calc(100vh - 58px)', overflowY: 'auto' }}>
           {menuItems.map(item => (
             <button key={item.id} onClick={() => setAtivaPagina(item.id)} style={{
               width: '100%', background: ativaPagina === item.id ? CORES.fundo : 'transparent',
@@ -1199,7 +1201,7 @@ const GestaoIncubadora = () => {
         </div>
 
         {/* Conteúdo */}
-        <div style={{ flex: 1, padding: 32, overflowY: 'auto' }}>
+        <div style={{ flex: 1, padding: 32, overflowY: 'auto', height: 'calc(100vh - 58px)' }}>
           {ativaPagina === 'dashboard' && <Dashboard />}
           {ativaPagina === 'empresas' && <ListaEmpresas />}
           {ativaPagina === 'desativadas' && <EmpresasDesativadas />}
