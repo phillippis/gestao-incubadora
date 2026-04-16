@@ -940,7 +940,7 @@ const GestaoIncubadora = () => {
                         : null;
 
                       return (
-                        <div key={b.id} style={{ background: 'white', border: `2px solid ${ocupado ? '#fecaca' : CORES.sucesso}`, borderRadius: 10, padding: '12px 12px 10px', position: 'relative' }}>
+                        <div key={b.id} style={{ background: 'white', border: `1px solid ${ocupado ? CORES.bordas : CORES.sucesso}`, borderRadius: 10, padding: '12px 12px 10px', position: 'relative' }}>
                           {/* Botões editar/excluir box */}
                           <div style={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: 3 }}>
                             <button onClick={e => { e.stopPropagation(); abrirEdicaoBox(b); }} title="Editar box" style={{ background: 'none', border: `1px solid ${CORES.bordas}`, borderRadius: 4, cursor: 'pointer', padding: '2px 6px', fontSize: 12, color: CORES.textoSecundario }}>✏</button>
@@ -951,8 +951,8 @@ const GestaoIncubadora = () => {
                           <button
                             onClick={() => {
                               if (ocupado && empresaDoBox) {
-                                setEmpresaEmEdicao(empresaDoBox);
                                 setAtivaPagina('empresas');
+                                setTimeout(() => setEmpresaEmEdicao(empresaDoBox), 50);
                               } else {
                                 setBoxPreSelecionado({ numero: b.numero, incubadoraId: b.incubadora_id });
                                 setMostrarFormulario(true);
@@ -962,10 +962,10 @@ const GestaoIncubadora = () => {
                             style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'left', display: 'block', width: '100%' }}
                           >
                             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-                              <span style={{ fontWeight: 800, fontSize: 15, color: ocupado ? CORES.perigo : CORES.sucesso }}>
+                              <span style={{ fontWeight: 800, fontSize: 15, color: ocupado ? CORES.texto : CORES.sucesso }}>
                                 Box {b.numero}
                               </span>
-                              <span style={{ width: 8, height: 8, borderRadius: '50%', background: ocupado ? CORES.perigo : CORES.sucesso, display: 'inline-block', flexShrink: 0 }} />
+                              <span style={{ width: 8, height: 8, borderRadius: '50%', background: ocupado ? CORES.textoSecundario : CORES.sucesso, display: 'inline-block', flexShrink: 0 }} />
                             </div>
                             {empresaDoBox ? (
                               <div style={{ fontSize: 11, color: CORES.textoSecundario, lineHeight: 1.4 }}>
