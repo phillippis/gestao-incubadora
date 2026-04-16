@@ -819,3 +819,17 @@ export const listarEmpresasComPendencias = async () => {
     return { sucesso: false, dados: [], erro: erro.message };
   }
 };
+
+export const listarControlesEmpresaPorTipo = async (controleTipoId) => {
+  try {
+    const { data, error } = await supabase
+      .from('controles_empresas')
+      .select('*, empresas(nome_empresa, boxes_numeros)')
+      .eq('controle_tipo_id', controleTipoId)
+      .order('created_at');
+    if (error) throw error;
+    return { sucesso: true, dados: data, erro: null };
+  } catch (erro) {
+    return { sucesso: false, dados: [], erro: erro.message };
+  }
+};
