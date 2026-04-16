@@ -935,9 +935,19 @@ const GestaoIncubadora = () => {
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 10 }}>
                     {boxes.map(b => {
                       const ocupado = boxesOcupados.has(String(b.numero));
-                      const empresaDoBox = ocupado
-                        ? empresas.find(e => e.boxes_numeros && String(e.boxes_numeros).split(',').map(n => n.trim()).includes(String(b.numero)))
-                        : null;
+                      // Encontrar empresa considerando a incubadora correta
+                      const empresaDoBox = ocupado ? (() => {
+                        return empresas.find(e => {
+                          if (!e.boxes_numeros) return false;
+                          const nums = String(e.boxes_numeros).split(',').map(n => n.trim());
+                          if (!nums.includes(String(b.numero))) return false;
+                          // Verificar se algum box da empresa pertence a esta incubadora
+                          return nums.some(num => {
+                            const bc = boxesCadastro.find(x => String(x.numero) === num && x.incubadora_id === inc.id);
+                            return !!bc;
+                          });
+                        });
+                      })() : null;
 
                       return (
                         <div key={b.id} style={{ background: 'white', border: `1px solid ${ocupado ? CORES.bordas : CORES.sucesso}`, borderRadius: 10, padding: '12px 12px 10px', position: 'relative' }}>
@@ -951,12 +961,10 @@ const GestaoIncubadora = () => {
                           <button
                             onClick={() => {
                               if (ocupado && empresaDoBox) {
-                                setAtivaPagina('empresas');
-                                setTimeout(() => setEmpresaEmEdicao(empresaDoBox), 50);
+                                setEmpresaEmEdicao(empresaDoBox);
                               } else {
                                 setBoxPreSelecionado({ numero: b.numero, incubadoraId: b.incubadora_id });
                                 setMostrarFormulario(true);
-                                setAtivaPagina('empresas');
                               }
                             }}
                             style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'left', display: 'block', width: '100%' }}
