@@ -46,7 +46,7 @@ const GestaoIncubadora = () => {
   const [boxesCadastro, setBoxesCadastro] = useState([]);
   const [controlesTipos, setControlesTipos] = useState([]);
   const [empresasComPendencias, setEmpresasComPendencias] = useState([]);
-  const [filtros, setFiltros] = useState({ busca: '', atividade: '', apenasPendentes: false });
+  const [filtros, setFiltros] = useState({ busca: '', atividade: '', apenasPendentes: false, incubadora: '' });
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [empresaEmEdicao, setEmpresaEmEdicao] = useState(null);
   const [expandidoId, setExpandidoId] = useState(null);
@@ -508,17 +508,124 @@ const GestaoIncubadora = () => {
     );
   };
 
+  // ==================== GESTÃO DE BOXES DA EMPRESA (inline) ====================
+  const GestaoBoxesEmpresa = ({ empresa }) => {
+    const [boxesEmpresa, setBoxesEmpresa] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [editandoBoxId, setEditandoBoxId] = useState(null);
+    const [novoBoxId, setNovoBoxId] = useState('');
+
+    useEffect(() => { carregarBoxesEmpresa(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+    const carregarBoxesEmpresa = async () => {
+      setLoading(true);
+      const r = await API.listarBoxesDeEmpresa(empresa.id);
+      if (r.sucesso) setBoxesEmpresa(r.dados);
+      setLoading(false);
+    };
+
+    const alterarBox = async (boxDbId, novoNumero) => {
+      const boxCadastro = boxesCadastro.find(b => String(b.numero) === String(novoNumero));
+      if (!boxCadastro) { mostrarMsg('erro', 'Box não encontrado'); return; }
+      const r = await API.alterarBoxEmpresa(boxDbId, boxCadastro.numero);
+      if (r.sucesso) { mostrarMsg('sucesso', 'Box alterado'); setEditandoBoxId(null); await carregarBoxesEmpresa(); await carregarEmpresas(); }
+      else mostrarMsg('erro', r.erro);
+    };
+
+    const removerBox = async (boxDbId) => {
+      if (boxesEmpresa.length <= 1) { mostrarMsg('erro', 'A empresa precisa ter pelo menos um box'); return; }
+      if (!window.confirm('Remover este box da empresa?')) return;
+      const r = await API.removerBoxEmpresa(boxDbId);
+      if (r.sucesso) { mostrarMsg('sucesso', 'Box removido'); await carregarBoxesEmpresa(); await carregarEmpresas(); }
+      else mostrarMsg('erro', r.erro);
+    };
+
+    const adicionarBox = async () => {
+      if (!novoBoxId) return;
+      const boxCadastro = boxesCadastro.find(b => b.id === novoBoxId);
+      if (!boxCadastro) return;
+      const r = await API.adicionarBoxEmpresa(empresa.id, boxCadastro.numero);
+      if (r.sucesso) { mostrarMsg('sucesso', 'Box adicionado'); setNovoBoxId(''); await carregarBoxesEmpresa(); await carregarEmpresas(); }
+      else mostrarMsg('erro', r.erro);
+    };
+
+    if (loading) return <div style={{ fontSize: 12, color: CORES.textoSecundario, marginBottom: 10 }}>Carregando boxes...</div>;
+
+    const boxesOcupados = boxesEmpresa.map(b => String(b.numero));
+    const boxesDisponiveis = boxesCadastro.filter(b => !boxesOcupados.includes(String(b.numero)));
+
+    return (
+      <div style={{ marginBottom: 12 }}>
+        <div style={{ fontSize: 11, fontWeight: 600, color: CORES.textoSecundario, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Boxes ocupados</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {boxesEmpresa.map(b => {
+            const boxCad = boxesCadastro.find(bc => String(bc.numero) === String(b.numero));
+            const inc = boxCad ? incubadoras.find(i => i.id === boxCad.incubadora_id) : null;
+            const label = inc ? `Incubadora ${inc.numero} / Box ${b.numero}` : `Box ${b.numero}`;
+            return (
+              <div key={b.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: CORES.fundo, border: `1px solid ${CORES.bordas}`, borderRadius: 8 }}>
+                {editandoBoxId === b.id ? (
+                  <>
+                    <Select value={String(b.numero)} onChange={e => alterarBox(b.id, e.target.value)} style={{ flex: 1, fontSize: 13 }}>
+                      <option value={b.numero}>{label} (atual)</option>
+                      {boxesDisponiveis.map(bc => {
+                        const incOpt = incubadoras.find(i => i.id === bc.incubadora_id);
+                        return <option key={bc.id} value={bc.numero}>{incOpt ? `Incubadora ${incOpt.numero} / Box ${bc.numero}` : `Box ${bc.numero}`}</option>;
+                      })}
+                    </Select>
+                    <Btn small outline cor={CORES.textoSecundario} onClick={() => setEditandoBoxId(null)}>Cancelar</Btn>
+                  </>
+                ) : (
+                  <>
+                    <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: CORES.roxo }}>📍 {label}</span>
+                    <Btn small outline cor={CORES.principal} onClick={() => setEditandoBoxId(b.id)}>Alterar</Btn>
+                    {boxesEmpresa.length > 1 && (
+                      <Btn small cor={CORES.perigo} onClick={() => removerBox(b.id)}><Trash2 size={12} /></Btn>
+                    )}
+                  </>
+                )}
+              </div>
+            );
+          })}
+
+          {/* Adicionar novo box */}
+          {boxesDisponiveis.length > 0 && (
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <Select value={novoBoxId} onChange={e => setNovoBoxId(e.target.value)} style={{ flex: 1, fontSize: 13 }}>
+                <option value="">+ Adicionar outro box...</option>
+                {boxesDisponiveis.map(bc => {
+                  const incOpt = incubadoras.find(i => i.id === bc.incubadora_id);
+                  return <option key={bc.id} value={bc.id}>{incOpt ? `Incubadora ${incOpt.numero} / Box ${bc.numero}` : `Box ${bc.numero}`}</option>;
+                })}
+              </Select>
+              {novoBoxId && <Btn small onClick={adicionarBox}><Plus size={13} /> Adicionar</Btn>}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   // ==================== LISTA EMPRESAS ====================
   const ListaEmpresas = () => {
-    const empresasFiltradas = empresas.filter(e => {
-      if (filtros.apenasPendentes && !empresasComPendencias.includes(e.id)) return false;
+    const empresasFiltradas = empresas.filter(empresa => {
+      if (filtros.apenasPendentes && !empresasComPendencias.includes(empresa.id)) return false;
+      if (filtros.incubadora) {
+        const boxNums = empresa.boxes_numeros ? String(empresa.boxes_numeros).split(',').map(b => b.trim()) : [];
+        const temIncubadora = boxNums.some(bn => {
+          const boxObj = boxesCadastro.find(b => String(b.numero) === bn);
+          const inc = boxObj ? incubadoras.find(i => i.id === boxObj.incubadora_id) : null;
+          return inc && String(inc.numero) === filtros.incubadora;
+        });
+        if (!temIncubadora) return false;
+      }
       return true;
     });
 
     return (
       <div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 22 }}>
-          <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700 }}>Empresas</h1>
+          <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700 }}>Empresas <span style={{ fontSize: 14, fontWeight: 400, color: CORES.textoSecundario }}>({empresasFiltradas.length})</span></h1>
           <Btn onClick={() => setMostrarFormulario(true)}><Plus size={16} /> Adicionar Empresa</Btn>
         </div>
 
@@ -528,15 +635,19 @@ const GestaoIncubadora = () => {
             🔍 Filtros
           </button>
           {filterVisible && (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: 10, padding: 14, background: CORES.fundo, borderRadius: 8, border: `1px solid ${CORES.bordas}`, alignItems: 'end' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto', gap: 10, padding: 14, background: CORES.fundo, borderRadius: 8, border: `1px solid ${CORES.bordas}`, alignItems: 'end' }}>
               <Input label="Buscar por nome ou CNPJ" value={filtros.busca} onChange={e => setFiltros({ ...filtros, busca: e.target.value })} />
               <Select label="Atividade" value={filtros.atividade} onChange={e => setFiltros({ ...filtros, atividade: e.target.value })}>
-                <option value="">Todas</option>
+                <option value="">Todas atividades</option>
                 {listaAtividades.map(a => <option key={a} value={a}>{a}</option>)}
+              </Select>
+              <Select label="Incubadora" value={filtros.incubadora} onChange={e => setFiltros({ ...filtros, incubadora: e.target.value })}>
+                <option value="">Todas as incubadoras</option>
+                {incubadoras.map(i => <option key={i.id} value={String(i.numero)}>Incubadora {i.numero}{i.endereco ? ` — ${i.endereco}` : ''}</option>)}
               </Select>
               <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, cursor: 'pointer', paddingBottom: 2 }}>
                 <input type="checkbox" checked={filtros.apenasPendentes} onChange={e => setFiltros({ ...filtros, apenasPendentes: e.target.checked })} />
-                Apenas com pendências
+                Só pendências
               </label>
             </div>
           )}
@@ -551,32 +662,30 @@ const GestaoIncubadora = () => {
           const acima2anos = tempo && tempo.totalMeses > 24;
           const temPendencia = empresasComPendencias.includes(empresa.id);
 
+          // Montar badges de localização por box
+          const boxNums = empresa.boxes_numeros ? String(empresa.boxes_numeros).split(',').map(b => b.trim()) : [];
+          const locBadges = boxNums.map(bn => {
+            const boxObj = boxesCadastro.find(b => String(b.numero) === bn);
+            const inc = boxObj ? incubadoras.find(i => i.id === boxObj.incubadora_id) : null;
+            return inc ? `Incubadora ${inc.numero} / Box ${bn}` : `Box ${bn}`;
+          });
+
           return (
             <div key={empresa.id} style={{ background: 'white', border: `1px solid ${temPendencia ? CORES.perigo : CORES.bordas}`, borderRadius: 10, marginBottom: 10, overflow: 'hidden' }}>
               <div onClick={() => setExpandidoId(expandidoId === empresa.id ? null : empresa.id)} style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', background: expandidoId === empresa.id ? CORES.fundo : 'white' }}>
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
-                    {/* Localização em destaque no início */}
-                    {empresa.boxes_numeros && (() => {
-                      const boxNums = String(empresa.boxes_numeros).split(',').map(b => b.trim());
-                      const boxObj = boxesCadastro.find(b => String(b.numero) === boxNums[0]);
-                      const inc = boxObj ? incubadoras.find(i => i.id === boxObj.incubadora_id) : null;
-                      const locLabel = inc
-                        ? `Incubadora ${inc.numero} / Box ${boxNums.join(', ')}`
-                        : `Box ${boxNums.join(', ')}`;
-                      return (
-                        <span style={{ background: '#f5f3ff', color: CORES.roxo, border: `1px solid #ddd6fe`, borderRadius: 20, padding: '2px 10px', fontSize: 11, fontWeight: 700 }}>
-                          📍 {locLabel}
-                        </span>
-                      );
-                    })()}
+                    {locBadges.map((label, i) => (
+                      <span key={i} style={{ background: '#f5f3ff', color: CORES.roxo, border: `1px solid #ddd6fe`, borderRadius: 20, padding: '2px 10px', fontSize: 11, fontWeight: 700 }}>
+                        📍 {label}
+                      </span>
+                    ))}
                     <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>{empresa.nome_empresa}</h3>
                     {temPendencia && (
                       <span style={{ background: '#fef2f2', color: CORES.perigo, border: `1px solid ${CORES.perigo}`, borderRadius: 20, padding: '2px 10px', fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
                         <AlertTriangle size={11} /> PENDÊNCIA
                       </span>
                     )}
-                    {/* Tempo na incubadora em destaque */}
                     {tempo && (
                       <span style={{ background: acima2anos ? '#fef2f2' : '#f0f9ff', color: acima2anos ? CORES.perigo : CORES.principal, border: `1px solid ${acima2anos ? CORES.perigo : '#bae6fd'}`, borderRadius: 20, padding: '2px 10px', fontSize: 11, fontWeight: 600 }}>
                         ⏱ {tempoStr}
@@ -603,7 +712,11 @@ const GestaoIncubadora = () => {
                       <div style={{ fontSize: 14 }}>{empresa.numero_funcionarios || 'N/A'}</div>
                     </div>
                   </div>
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+
+                  {/* Gestão de boxes da empresa */}
+                  <GestaoBoxesEmpresa empresa={empresa} />
+
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
                     <Btn small onClick={() => setEmpresaControlesAberta(empresa)} cor={CORES.aviso}>
                       <CheckCircle size={13} /> Controles
                     </Btn>
