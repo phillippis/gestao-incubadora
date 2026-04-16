@@ -556,6 +556,20 @@ const GestaoIncubadora = () => {
               <div onClick={() => setExpandidoId(expandidoId === empresa.id ? null : empresa.id)} style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', background: expandidoId === empresa.id ? CORES.fundo : 'white' }}>
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
+                    {/* Localização em destaque no início */}
+                    {empresa.boxes_numeros && (() => {
+                      const boxNums = String(empresa.boxes_numeros).split(',').map(b => b.trim());
+                      const boxObj = boxesCadastro.find(b => String(b.numero) === boxNums[0]);
+                      const inc = boxObj ? incubadoras.find(i => i.id === boxObj.incubadora_id) : null;
+                      const locLabel = inc
+                        ? `Incubadora ${inc.numero} / Box ${boxNums.join(', ')}`
+                        : `Box ${boxNums.join(', ')}`;
+                      return (
+                        <span style={{ background: '#f5f3ff', color: CORES.roxo, border: `1px solid #ddd6fe`, borderRadius: 20, padding: '2px 10px', fontSize: 11, fontWeight: 700 }}>
+                          📍 {locLabel}
+                        </span>
+                      );
+                    })()}
                     <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>{empresa.nome_empresa}</h3>
                     {temPendencia && (
                       <span style={{ background: '#fef2f2', color: CORES.perigo, border: `1px solid ${CORES.perigo}`, borderRadius: 20, padding: '2px 10px', fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -570,7 +584,7 @@ const GestaoIncubadora = () => {
                     )}
                   </div>
                   <div style={{ fontSize: 12, color: CORES.textoSecundario }}>
-                    CNPJ: {empresa.cnpj} · {empresa.atividade} · Boxes: {empresa.boxes_numeros || 'N/A'}
+                    CNPJ: {empresa.cnpj} · {empresa.atividade}
                   </div>
                 </div>
                 <ChevronDown size={18} color={CORES.principal} style={{ transform: expandidoId === empresa.id ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0 }} />
