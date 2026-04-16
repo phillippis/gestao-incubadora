@@ -291,7 +291,7 @@ const GestaoIncubadora = () => {
   const FormularioEmpresa = ({ empresa = null, onSalvar, onCancelar }) => {
     const [form, setForm] = useState(empresa || {
       nomeEmpresa: '', cnpj: '', inscricaoMunicipal: '', telefonePrincipal: '',
-      telefoneSecundario: '', numeroFuncionarios: '', atividade: '',
+      telefoneSecundario: '', numeroFuncionarios: '', atividade: '', email: '', porte: '',
       boxes: [{ numero: '', dataEntrada: new Date().toISOString().split('T')[0] }],
       obrigacoes: []
     });
@@ -313,6 +313,15 @@ const GestaoIncubadora = () => {
           <Input label="Telefone Principal" type="tel" value={form.telefonePrincipal} onChange={e => setForm({ ...form, telefonePrincipal: e.target.value })} />
           <Input label="Telefone Secundário" type="tel" value={form.telefoneSecundario} onChange={e => setForm({ ...form, telefoneSecundario: e.target.value })} />
           <Input label="Nº de Funcionários" type="number" value={form.numeroFuncionarios} onChange={e => setForm({ ...form, numeroFuncionarios: e.target.value })} />
+          <Input label="E-mail" type="email" value={form.email || ''} onChange={e => setForm({ ...form, email: e.target.value })} placeholder="contato@empresa.com.br" />
+          <Select label="Porte da Empresa" value={form.porte || ''} onChange={e => setForm({ ...form, porte: e.target.value })}>
+            <option value="">Selecione...</option>
+            <option value="MEI">MEI</option>
+            <option value="ME">ME — Microempresa</option>
+            <option value="EPP">EPP — Empresa de Pequeno Porte</option>
+            <option value="Médio">Médio Porte</option>
+            <option value="Grande">Grande Porte</option>
+          </Select>
         </div>
 
         <div style={{ marginBottom: 20 }}>
