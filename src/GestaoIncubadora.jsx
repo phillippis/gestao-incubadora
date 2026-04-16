@@ -818,8 +818,6 @@ const GestaoIncubadora = () => {
       setForm({ categoria: 'conta', nome: '', mesReferencia: '', nomeCapacitacao: '', tipoNotificacao: '', paraTodos: false });
     };
 
-    const categoriaLabel = { conta: '💰', capacitacao: '📚', notificacao: '📄' };
-
     return (
       <div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 22 }}>
