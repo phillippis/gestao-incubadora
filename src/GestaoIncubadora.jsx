@@ -97,6 +97,8 @@ const GestaoIncubadora = () => {
   const [filterVisible, setFilterVisible] = useState(false);
   const [mensagem, setMensagem] = useState({ tipo: '', texto: '', visivel: false });
   const [empresaControlesAberta, setEmpresaControlesAberta] = useState(null);
+  const [filtroBoxStatus, setFiltroBoxStatus] = useState('todos');
+  const [boxPreSelecionado, setBoxPreSelecionado] = useState(null);
 
   const listaAtividades = [
     'Serviços de Serralheria','Consultoria','Tecnologia','Design','Alimentos',
@@ -295,11 +297,11 @@ const GestaoIncubadora = () => {
   };
 
   // ==================== FORMULÁRIO EMPRESA ====================
-  const FormularioEmpresa = ({ empresa = null, onSalvar, onCancelar }) => {
+  const FormularioEmpresa = ({ empresa = null, onSalvar, onCancelar, boxInicial = null }) => {
     const [form, setForm] = useState(empresa || {
       nomeEmpresa: '', cnpj: '', inscricaoMunicipal: '', telefonePrincipal: '',
       telefoneSecundario: '', numeroFuncionarios: '', atividade: '', email: '', porte: '',
-      boxes: [{ numero: '', dataEntrada: new Date().toISOString().split('T')[0] }],
+      boxes: [{ numero: boxInicial?.numero || '', dataEntrada: new Date().toISOString().split('T')[0] }],
       obrigacoes: []
     });
 
@@ -864,9 +866,18 @@ const GestaoIncubadora = () => {
         {/* ---- ABA BOXES ---- */}
         {aba === 'boxes' && (
           <div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
+              {/* Filtro disponível/ocupado */}
+              <div style={{ display: 'flex', gap: 6, background: CORES.fundo, padding: 5, borderRadius: 8 }}>
+                {['todos', 'disponivel', 'ocupado'].map(f => (
+                  <button key={f} onClick={() => setFiltroBoxStatus(f)} style={{ padding: '5px 14px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: filtroBoxStatus === f ? 700 : 400, background: filtroBoxStatus === f ? CORES.principal : 'transparent', color: filtroBoxStatus === f ? 'white' : CORES.textoSecundario }}>
+                    {f === 'todos' ? 'Todos' : f === 'disponivel' ? '🟢 Disponíveis' : '🔵 Ocupados'}
+                  </button>
+                ))}
+              </div>
               <Btn onClick={abrirNovoBox} disabled={incubadoras.length === 0}><Plus size={16} /> Novo Box</Btn>
             </div>
+
             {incubadoras.length === 0 && (
               <div style={{ background: '#fffbeb', border: `1px solid ${CORES.aviso}`, borderRadius: 8, padding: 14, marginBottom: 16, fontSize: 13, color: '#92400e' }}>
                 ⚠ Cadastre pelo menos uma incubadora antes de adicionar boxes.
@@ -895,28 +906,82 @@ const GestaoIncubadora = () => {
 
             {boxesCadastro.length === 0 ? (
               <div style={{ textAlign: 'center', padding: 40, color: CORES.textoSecundario, background: CORES.fundo, borderRadius: 10 }}>Nenhum box cadastrado.</div>
-            ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 12 }}>
-                {boxesCadastro.map(b => {
-                  const inc = incubadoras.find(i => i.id === b.incubadora_id);
-                  return (
-                    <div key={b.id} style={{ background: 'white', border: `1px solid ${CORES.bordas}`, borderRadius: 10, padding: 16 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
-                        <div>
-                          <div style={{ fontWeight: 700, fontSize: 16, color: CORES.principal }}>Box {b.numero}</div>
-                          {inc && <div style={{ fontSize: 12, color: CORES.textoSecundario, marginTop: 2 }}>Incubadora {inc.numero}</div>}
+            ) : (() => {
+              // Calcular quais boxes estão ocupados
+              const boxesOcupados = new Set(
+                empresas.flatMap(e =>
+                  e.boxes_numeros ? String(e.boxes_numeros).split(',').map(n => n.trim()) : []
+                )
+              );
+
+              const boxesFiltrados = boxesCadastro.filter(b => {
+                const ocupado = boxesOcupados.has(String(b.numero));
+                if (filtroBoxStatus === 'disponivel') return !ocupado;
+                if (filtroBoxStatus === 'ocupado') return ocupado;
+                return true;
+              });
+
+              // Agrupar por incubadora
+              const porIncubadora = incubadoras.map(inc => ({
+                inc,
+                boxes: boxesFiltrados.filter(b => b.incubadora_id === inc.id)
+              })).filter(g => g.boxes.length > 0);
+
+              return porIncubadora.map(({ inc, boxes }) => (
+                <div key={inc.id} style={{ marginBottom: 24 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: CORES.textoSecundario, marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    🏭 Incubadora {inc.numero} — {inc.endereco}
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 10 }}>
+                    {boxes.map(b => {
+                      const ocupado = boxesOcupados.has(String(b.numero));
+                      const empresaDoBox = ocupado
+                        ? empresas.find(e => e.boxes_numeros && String(e.boxes_numeros).split(',').map(n => n.trim()).includes(String(b.numero)))
+                        : null;
+
+                      return (
+                        <div key={b.id} style={{ background: 'white', border: `2px solid ${ocupado ? CORES.bordas : CORES.sucesso}`, borderRadius: 10, padding: 14, position: 'relative' }}>
+                          {/* Badge status */}
+                          <div style={{ position: 'absolute', top: 10, right: 10, display: 'flex', gap: 4 }}>
+                            <Btn small outline cor={CORES.principal} onClick={() => abrirEdicaoBox(b)}>✏</Btn>
+                            <Btn small cor={CORES.perigo} onClick={() => excluirBox(b.id)}><Trash2 size={12} /></Btn>
+                          </div>
+
+                          {/* Número do box — clicável */}
+                          <button
+                            onClick={() => {
+                              if (ocupado && empresaDoBox) {
+                                setEmpresaEmEdicao(empresaDoBox);
+                              } else {
+                                setBoxPreSelecionado({ numero: b.numero, incubadoraId: b.incubadora_id });
+                                setMostrarFormulario(true);
+                              }
+                            }}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'left' }}
+                          >
+                            <div style={{ fontWeight: 800, fontSize: 22, color: ocupado ? CORES.principal : CORES.sucesso, marginBottom: 4 }}>
+                              Box {b.numero}
+                            </div>
+                          </button>
+
+                          <div style={{ display: 'inline-block', background: ocupado ? '#eff6ff' : '#f0fdf4', color: ocupado ? CORES.principal : CORES.sucesso, borderRadius: 20, padding: '2px 8px', fontSize: 11, fontWeight: 700, marginBottom: 6 }}>
+                            {ocupado ? '🔵 Ocupado' : '🟢 Disponível'}
+                          </div>
+
+                          {empresaDoBox && (
+                            <div style={{ fontSize: 12, color: CORES.textoSecundario, marginTop: 4 }}>
+                              {empresaDoBox.atividade || empresaDoBox.nome_empresa}
+                            </div>
+                          )}
+
+                          {b.observacoes && <div style={{ fontSize: 11, color: CORES.textoSecundario, fontStyle: 'italic', marginTop: 4 }}>{b.observacoes}</div>}
                         </div>
-                        <div style={{ display: 'flex', gap: 6 }}>
-                          <Btn small outline cor={CORES.principal} onClick={() => abrirEdicaoBox(b)}>Editar</Btn>
-                          <Btn small cor={CORES.perigo} onClick={() => excluirBox(b.id)}><Trash2 size={13} /></Btn>
-                        </div>
-                      </div>
-                      {b.observacoes && <div style={{ fontSize: 12, color: CORES.textoSecundario, fontStyle: 'italic' }}>{b.observacoes}</div>}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+                      );
+                    })}
+                  </div>
+                </div>
+              ));
+            })()}
           </div>
         )}
       </div>
@@ -1211,7 +1276,7 @@ const GestaoIncubadora = () => {
       </div>
 
       {/* Modais */}
-      {mostrarFormulario && <FormularioEmpresa onSalvar={adicionarEmpresa} onCancelar={() => setMostrarFormulario(false)} />}
+      {mostrarFormulario && <FormularioEmpresa boxInicial={boxPreSelecionado} onSalvar={adicionarEmpresa} onCancelar={() => { setMostrarFormulario(false); setBoxPreSelecionado(null); }} />}
       {empresaEmEdicao && <FormularioEmpresa empresa={empresaEmEdicao} onSalvar={d => atualizarEmpresa(empresaEmEdicao.id, d)} onCancelar={() => setEmpresaEmEdicao(null)} />}
       {empresaControlesAberta && <ModalControlesEmpresa empresa={empresaControlesAberta} onFechar={() => setEmpresaControlesAberta(null)} />}
     </div>
