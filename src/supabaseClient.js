@@ -165,6 +165,8 @@ export const criarEmpresa = async (empresaData, usuarioEmail) => {
           telefone_secundario: empresaData.telefoneSecundario,
           numero_funcionarios: empresaData.numeroFuncionarios,
           atividade: empresaData.atividade,
+          email_empresa: empresaData.email || null,
+          porte: empresaData.porte || null,
           email_ultima_manutencao: usuarioEmail,
         },
       ])
@@ -224,6 +226,8 @@ export const atualizarEmpresa = async (id, empresaData, usuarioEmail) => {
         telefone_secundario: empresaData.telefoneSecundario,
         numero_funcionarios: empresaData.numeroFuncionarios,
         atividade: empresaData.atividade,
+        email_empresa: empresaData.email || null,
+        porte: empresaData.porte || null,
         email_ultima_manutencao: usuarioEmail,
       })
       .eq('id', id);
