@@ -630,3 +630,192 @@ export const inscreverObrigacoesAtualizacoes = (callback) => {
     )
     .subscribe();
 };
+
+// ==================== FUNÇÕES DE BOXES CADASTRO ====================
+
+export const listarBoxesCadastro = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('boxes_cadastro')
+      .select('*')
+      .eq('ativo', true)
+      .order('numero');
+    if (error) throw error;
+    return { sucesso: true, dados: data, erro: null };
+  } catch (erro) {
+    return { sucesso: false, dados: [], erro: erro.message };
+  }
+};
+
+export const criarBoxCadastro = async (dados) => {
+  try {
+    const { data, error } = await supabase
+      .from('boxes_cadastro')
+      .insert([{ numero: dados.numero, endereco: dados.endereco, observacoes: dados.observacoes, ativo: true }])
+      .select().single();
+    if (error) throw error;
+    return { sucesso: true, dados: data, erro: null };
+  } catch (erro) {
+    return { sucesso: false, dados: null, erro: erro.message };
+  }
+};
+
+export const atualizarBoxCadastro = async (id, dados) => {
+  try {
+    const { error } = await supabase
+      .from('boxes_cadastro')
+      .update({ numero: dados.numero, endereco: dados.endereco, observacoes: dados.observacoes })
+      .eq('id', id);
+    if (error) throw error;
+    return { sucesso: true, erro: null };
+  } catch (erro) {
+    return { sucesso: false, erro: erro.message };
+  }
+};
+
+export const excluirBoxCadastro = async (id) => {
+  try {
+    const { error } = await supabase
+      .from('boxes_cadastro')
+      .update({ ativo: false })
+      .eq('id', id);
+    if (error) throw error;
+    return { sucesso: true, erro: null };
+  } catch (erro) {
+    return { sucesso: false, erro: erro.message };
+  }
+};
+
+// ==================== FUNÇÕES DE CONTROLES ====================
+
+export const listarControlesTipos = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('controles_tipos')
+      .select('*')
+      .eq('ativo', true)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return { sucesso: true, dados: data, erro: null };
+  } catch (erro) {
+    return { sucesso: false, dados: [], erro: erro.message };
+  }
+};
+
+export const criarControleTipo = async (dados, usuarioEmail) => {
+  try {
+    const { data, error } = await supabase
+      .from('controles_tipos')
+      .insert([{
+        categoria: dados.categoria,
+        nome: dados.nome,
+        mes_referencia: dados.mesReferencia || null,
+        nome_capacitacao: dados.nomeCapacitacao || null,
+        tipo_notificacao: dados.tipoNotificacao || null,
+        para_todos: dados.paraTodos || false,
+        ativo: true,
+        criado_por: usuarioEmail,
+      }])
+      .select().single();
+    if (error) throw error;
+
+    // Se for para todos, criar controle_empresa para cada empresa ativa
+    if (dados.paraTodos) {
+      const { data: empresas } = await supabase
+        .from('empresas')
+        .select('id')
+        .eq('ativa', true);
+      if (empresas && empresas.length > 0) {
+        const inserts = empresas.map(e => ({
+          empresa_id: e.id,
+          controle_tipo_id: data.id,
+          status: 'pendente',
+        }));
+        await supabase.from('controles_empresas').insert(inserts);
+      }
+    }
+
+    return { sucesso: true, dados: data, erro: null };
+  } catch (erro) {
+    return { sucesso: false, dados: null, erro: erro.message };
+  }
+};
+
+export const excluirControleTipo = async (id) => {
+  try {
+    // Excluir controles de empresas vinculados
+    await supabase.from('controles_empresas').delete().eq('controle_tipo_id', id);
+    const { error } = await supabase
+      .from('controles_tipos')
+      .update({ ativo: false })
+      .eq('id', id);
+    if (error) throw error;
+    return { sucesso: true, erro: null };
+  } catch (erro) {
+    return { sucesso: false, erro: erro.message };
+  }
+};
+
+export const listarControlesEmpresa = async (empresaId) => {
+  try {
+    const { data, error } = await supabase
+      .from('controles_empresas')
+      .select('*, controles_tipos(*)')
+      .eq('empresa_id', empresaId)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return { sucesso: true, dados: data, erro: null };
+  } catch (erro) {
+    return { sucesso: false, dados: [], erro: erro.message };
+  }
+};
+
+export const adicionarControleEmpresa = async (empresaId, controleTipoId, usuarioEmail) => {
+  try {
+    const { data, error } = await supabase
+      .from('controles_empresas')
+      .insert([{ empresa_id: empresaId, controle_tipo_id: controleTipoId, status: 'pendente', atualizado_por: usuarioEmail }])
+      .select('*, controles_tipos(*)').single();
+    if (error) throw error;
+    return { sucesso: true, dados: data, erro: null };
+  } catch (erro) {
+    return { sucesso: false, dados: null, erro: erro.message };
+  }
+};
+
+export const atualizarStatusControle = async (id, status, usuarioEmail) => {
+  try {
+    const { error } = await supabase
+      .from('controles_empresas')
+      .update({ status, atualizado_por: usuarioEmail, updated_at: new Date().toISOString() })
+      .eq('id', id);
+    if (error) throw error;
+    return { sucesso: true, erro: null };
+  } catch (erro) {
+    return { sucesso: false, erro: erro.message };
+  }
+};
+
+export const excluirControleEmpresa = async (id) => {
+  try {
+    const { error } = await supabase.from('controles_empresas').delete().eq('id', id);
+    if (error) throw error;
+    return { sucesso: true, erro: null };
+  } catch (erro) {
+    return { sucesso: false, erro: erro.message };
+  }
+};
+
+export const listarEmpresasComPendencias = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('controles_empresas')
+      .select('empresa_id')
+      .eq('status', 'pendente');
+    if (error) throw error;
+    const ids = [...new Set((data || []).map(d => d.empresa_id))];
+    return { sucesso: true, dados: ids, erro: null };
+  } catch (erro) {
+    return { sucesso: false, dados: [], erro: erro.message };
+  }
+};
