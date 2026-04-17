@@ -705,35 +705,7 @@ const GestaoIncubadora = () => {
           </div>
         )}
 
-        {/* Filtros */}
-        <div style={{ marginBottom: 20 }}>
-          <button onClick={() => setFilterVisible(!filterVisible)} style={{ background: filterVisible ? CORES.principal : CORES.fundo, color: filterVisible ? 'white' : CORES.principal, border: `1px solid ${CORES.bordas}`, padding: '7px 14px', borderRadius: 6, cursor: 'pointer', fontWeight: 500, fontSize: 13, marginBottom: 10 }}>
-            🔍 Filtros
-          </button>
-          {filterVisible && (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto', gap: 10, padding: 14, background: CORES.fundo, borderRadius: 8, border: `1px solid ${CORES.bordas}`, alignItems: 'end' }}>
-              <BuscaInput value={filtros.busca} onChange={e => setFiltros(f => ({ ...f, busca: e.target.value }))} />
-              <div>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: CORES.textoSecundario, marginBottom: 4 }}>Atividade</label>
-                <select value={filtros.atividade} onChange={e => setFiltros(f => ({ ...f, atividade: e.target.value }))} style={{ width: '100%', padding: '8px 10px', border: `1px solid ${CORES.bordas}`, borderRadius: 6, fontSize: 14, boxSizing: 'border-box', background: 'white' }}>
-                  <option value="">Todas atividades</option>
-                  {listaAtividades.map(a => <option key={a} value={a}>{a}</option>)}
-                </select>
-              </div>
-              <div>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: CORES.textoSecundario, marginBottom: 4 }}>Incubadora</label>
-                <select value={filtros.incubadora} onChange={e => setFiltros(f => ({ ...f, incubadora: e.target.value }))} style={{ width: '100%', padding: '8px 10px', border: `1px solid ${CORES.bordas}`, borderRadius: 6, fontSize: 14, boxSizing: 'border-box', background: 'white' }}>
-                  <option value="">Todas as incubadoras</option>
-                  {incubadoras.map(i => <option key={i.id} value={String(i.numero)}>Incubadora {i.numero}{i.endereco ? ` — ${i.endereco}` : ''}</option>)}
-                </select>
-              </div>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, cursor: 'pointer', paddingBottom: 2 }}>
-                <input type="checkbox" checked={filtros.apenasPendentes} onChange={e => setFiltros(f => ({ ...f, apenasPendentes: e.target.checked }))} />
-                Só pendências
-              </label>
-            </div>
-          )}
-        </div>
+        {/* Filtros renderizados pelo componente pai — não remover */}
 
         {/* Lista */}
         {empresasFiltradas.length === 0 ? (
@@ -1544,7 +1516,43 @@ const GestaoIncubadora = () => {
         {/* Conteúdo */}
         <div style={{ flex: 1, padding: 32, overflowY: 'auto', height: 'calc(100vh - 58px)' }}>
           {ativaPagina === 'dashboard' && <Dashboard />}
-          {ativaPagina === 'empresas' && <ListaEmpresas />}
+          {ativaPagina === 'empresas' && (
+            <div>
+              {/* Filtros — aqui fora de ListaEmpresas para preservar foco */}
+              <div style={{ marginBottom: 20 }}>
+                <button onClick={() => setFilterVisible(!filterVisible)} style={{ background: filterVisible ? CORES.principal : CORES.fundo, color: filterVisible ? 'white' : CORES.principal, border: `1px solid ${CORES.bordas}`, padding: '7px 14px', borderRadius: 6, cursor: 'pointer', fontWeight: 500, fontSize: 13, marginBottom: 10 }}>
+                  🔍 Filtros
+                </button>
+                {filterVisible && (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto', gap: 10, padding: 14, background: CORES.fundo, borderRadius: 8, border: `1px solid ${CORES.bordas}`, alignItems: 'end' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: CORES.textoSecundario, marginBottom: 4 }}>Buscar por nome ou CNPJ</label>
+                      <input type="text" value={filtros.busca} onChange={e => setFiltros(f => ({ ...f, busca: e.target.value }))} placeholder="Digite para buscar..." autoComplete="off" style={{ width: '100%', padding: '8px 10px', border: `1px solid ${CORES.bordas}`, borderRadius: 6, fontSize: 14, boxSizing: 'border-box' }} />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: CORES.textoSecundario, marginBottom: 4 }}>Atividade</label>
+                      <select value={filtros.atividade} onChange={e => setFiltros(f => ({ ...f, atividade: e.target.value }))} style={{ width: '100%', padding: '8px 10px', border: `1px solid ${CORES.bordas}`, borderRadius: 6, fontSize: 14, boxSizing: 'border-box', background: 'white' }}>
+                        <option value="">Todas atividades</option>
+                        {listaAtividades.map(a => <option key={a} value={a}>{a}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: CORES.textoSecundario, marginBottom: 4 }}>Incubadora</label>
+                      <select value={filtros.incubadora} onChange={e => setFiltros(f => ({ ...f, incubadora: e.target.value }))} style={{ width: '100%', padding: '8px 10px', border: `1px solid ${CORES.bordas}`, borderRadius: 6, fontSize: 14, boxSizing: 'border-box', background: 'white' }}>
+                        <option value="">Todas as incubadoras</option>
+                        {incubadoras.map(i => <option key={i.id} value={String(i.numero)}>Incubadora {i.numero}{i.endereco ? ` — ${i.endereco}` : ''}</option>)}
+                      </select>
+                    </div>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, cursor: 'pointer', paddingBottom: 2 }}>
+                      <input type="checkbox" checked={filtros.apenasPendentes} onChange={e => setFiltros(f => ({ ...f, apenasPendentes: e.target.checked }))} />
+                      Só pendências
+                    </label>
+                  </div>
+                )}
+              </div>
+              <ListaEmpresas />
+            </div>
+          )}
           {ativaPagina === 'fila' && <FilaEspera />}
           {ativaPagina === 'boxes' && <GestaoBoxes />}
           {ativaPagina === 'controles' && <GestaoControles />}
