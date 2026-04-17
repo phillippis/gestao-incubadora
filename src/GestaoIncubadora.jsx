@@ -298,12 +298,28 @@ const GestaoIncubadora = () => {
 
   // ==================== FORMULÁRIO EMPRESA ====================
   const FormularioEmpresa = ({ empresa = null, onSalvar, onCancelar, boxInicial = null }) => {
-    const [form, setForm] = useState(empresa || {
+    // Converter campos snake_case da API para camelCase do formulário
+    const formInicial = empresa ? {
+      nomeEmpresa: empresa.nome_empresa || '',
+      cnpj: empresa.cnpj || '',
+      inscricaoMunicipal: empresa.inscricao_municipal || '',
+      telefonePrincipal: empresa.telefone_principal || '',
+      telefoneSecundario: empresa.telefone_secundario || '',
+      numeroFuncionarios: empresa.numero_funcionarios || '',
+      atividade: empresa.atividade || '',
+      email: empresa.email_empresa || '',
+      porte: empresa.porte || '',
+      boxes: empresa.boxes_numeros
+        ? String(empresa.boxes_numeros).split(',').map(n => ({ numero: n.trim(), dataEntrada: empresa.data_entrada_mais_antiga || new Date().toISOString().split('T')[0] }))
+        : [{ numero: '', dataEntrada: new Date().toISOString().split('T')[0] }],
+      obrigacoes: []
+    } : {
       nomeEmpresa: '', cnpj: '', inscricaoMunicipal: '', telefonePrincipal: '',
       telefoneSecundario: '', numeroFuncionarios: '', atividade: '', email: '', porte: '',
       boxes: [{ numero: boxInicial?.numero || '', dataEntrada: new Date().toISOString().split('T')[0] }],
       obrigacoes: []
-    });
+    };
+    const [form, setForm] = useState(formInicial);
 
     const handleBoxChange = (i, campo, val) => {
       const b = [...form.boxes]; b[i] = { ...b[i], [campo]: val }; setForm({ ...form, boxes: b });
@@ -908,17 +924,22 @@ const GestaoIncubadora = () => {
               <div style={{ textAlign: 'center', padding: 40, color: CORES.textoSecundario, background: CORES.fundo, borderRadius: 10 }}>Nenhum box cadastrado.</div>
             ) : (() => {
               // Mapa: "incubadora_id|numero_box" -> empresa
-              // Para cada box do cadastro, verificar se alguma empresa o ocupa
+              // Itera cada box cadastrado e verifica qual empresa o ocupa
               const mapaBoxEmpresa = {};
               boxesCadastro.forEach(bc => {
-                const empresaOcupante = empresas.find(e => {
+                if (!bc.incubadora_id) return;
+                const emp = empresas.find(e => {
                   if (!e.boxes_numeros) return false;
-                  const nums = String(e.boxes_numeros).split(',').map(n => n.trim());
-                  return nums.includes(String(bc.numero));
+                  return String(e.boxes_numeros).split(',').map(n => n.trim()).includes(String(bc.numero));
                 });
-                if (empresaOcupante) {
-                  const chave = bc.incubadora_id + '|' + bc.numero;
-                  mapaBoxEmpresa[chave] = empresaOcupante;
+                // Só vincular se a empresa tem pelo menos um box nessa incubadora
+                if (emp) {
+                  const temNessaInc = String(emp.boxes_numeros || '').split(',').map(n => n.trim()).some(num => {
+                    return boxesCadastro.some(x => String(x.numero) === num && x.incubadora_id === bc.incubadora_id);
+                  });
+                  if (temNessaInc) {
+                    mapaBoxEmpresa[bc.incubadora_id + '|' + bc.numero] = emp;
+                  }
                 }
               });
 
