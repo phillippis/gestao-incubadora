@@ -181,6 +181,7 @@ export const criarEmpresa = async (empresaData, usuarioEmail) => {
         numero: parseInt(box.numero),
         empresa_id: empresa.id,
         data_entrada: box.dataEntrada,
+        incubadora_id: box.incubadoraId || null,
         ativo: true,
       }));
 
