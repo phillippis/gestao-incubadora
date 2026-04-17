@@ -78,21 +78,6 @@ const Modal = ({ titulo, onFechar, children, largura = 600 }) => (
   </div>
 );
 
-// Input de busca estável — fora do componente principal para não perder foco
-const BuscaInput = React.memo(({ value, onChange }) => (
-  <div>
-    <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: CORES.textoSecundario, marginBottom: 4 }}>Buscar por nome ou CNPJ</label>
-    <input
-      type="text"
-      value={value}
-      onChange={onChange}
-      placeholder="Digite para buscar..."
-      autoComplete="off"
-      style={{ width: '100%', padding: '8px 10px', border: `1px solid ${CORES.bordas}`, borderRadius: 6, fontSize: 14, boxSizing: 'border-box' }}
-    />
-  </div>
-));
-
 const GestaoIncubadora = () => {
   const [usuario, setUsuario] = useState(null);
   const [carregando, setCarregando] = useState(true);
