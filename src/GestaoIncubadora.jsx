@@ -78,6 +78,21 @@ const Modal = ({ titulo, onFechar, children, largura = 600 }) => (
   </div>
 );
 
+// Input de busca estável — fora do componente principal para não perder foco
+const BuscaInput = React.memo(({ value, onChange }) => (
+  <div>
+    <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: CORES.textoSecundario, marginBottom: 4 }}>Buscar por nome ou CNPJ</label>
+    <input
+      type="text"
+      value={value}
+      onChange={onChange}
+      placeholder="Digite para buscar..."
+      autoComplete="off"
+      style={{ width: '100%', padding: '8px 10px', border: `1px solid ${CORES.bordas}`, borderRadius: 6, fontSize: 14, boxSizing: 'border-box' }}
+    />
+  </div>
+));
+
 const GestaoIncubadora = () => {
   const [usuario, setUsuario] = useState(null);
   const [carregando, setCarregando] = useState(true);
@@ -697,16 +712,7 @@ const GestaoIncubadora = () => {
           </button>
           {filterVisible && (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto', gap: 10, padding: 14, background: CORES.fundo, borderRadius: 8, border: `1px solid ${CORES.bordas}`, alignItems: 'end' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: CORES.textoSecundario, marginBottom: 4 }}>Buscar por nome ou CNPJ</label>
-                <input
-                  type="text"
-                  value={filtros.busca}
-                  onChange={e => setFiltros(f => ({ ...f, busca: e.target.value }))}
-                  placeholder="Digite para buscar..."
-                  style={{ width: '100%', padding: '8px 10px', border: `1px solid ${CORES.bordas}`, borderRadius: 6, fontSize: 14, boxSizing: 'border-box' }}
-                />
-              </div>
+              <BuscaInput value={filtros.busca} onChange={e => setFiltros(f => ({ ...f, busca: e.target.value }))} />
               <div>
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: CORES.textoSecundario, marginBottom: 4 }}>Atividade</label>
                 <select value={filtros.atividade} onChange={e => setFiltros(f => ({ ...f, atividade: e.target.value }))} style={{ width: '100%', padding: '8px 10px', border: `1px solid ${CORES.bordas}`, borderRadius: 6, fontSize: 14, boxSizing: 'border-box', background: 'white' }}>
