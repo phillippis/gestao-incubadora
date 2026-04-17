@@ -197,7 +197,7 @@ const GestaoIncubadora = () => {
   const adicionarEmpresa = async (dados) => {
     setCarregando(true);
     const r = await API.criarEmpresa(dados, usuario.email);
-    if (r.sucesso) { mostrarMsg('sucesso', 'Empresa adicionada'); setMostrarFormulario(false); await carregarEmpresas(); await carregarDados(); }
+    if (r.sucesso) { mostrarMsg('sucesso', 'Empresa adicionada'); setMostrarFormulario(false); await carregarEmpresas(); await carregarDados(); await carregarBoxes(); }
     else mostrarMsg('erro', r.erro);
     setCarregando(false);
   };
@@ -205,7 +205,7 @@ const GestaoIncubadora = () => {
   const atualizarEmpresa = async (id, dados) => {
     setCarregando(true);
     const r = await API.atualizarEmpresa(id, dados, usuario.email);
-    if (r.sucesso) { mostrarMsg('sucesso', 'Empresa atualizada'); setEmpresaEmEdicao(null); await carregarEmpresas(); await carregarDados(); }
+    if (r.sucesso) { mostrarMsg('sucesso', 'Empresa atualizada'); setEmpresaEmEdicao(null); await carregarEmpresas(); await carregarDados(); await carregarBoxes(); }
     else mostrarMsg('erro', r.erro);
     setCarregando(false);
   };
@@ -214,7 +214,7 @@ const GestaoIncubadora = () => {
     if (!window.confirm('Desativar esta empresa?')) return;
     setCarregando(true);
     const r = await API.desativarEmpresa(id, usuario.email);
-    if (r.sucesso) { mostrarMsg('sucesso', 'Empresa desativada'); await carregarEmpresas(); await carregarDados(); }
+    if (r.sucesso) { mostrarMsg('sucesso', 'Empresa desativada'); await carregarEmpresas(); await carregarDados(); await carregarBoxes(); }
     else mostrarMsg('erro', r.erro);
     setCarregando(false);
   };
@@ -880,7 +880,7 @@ const GestaoIncubadora = () => {
       await API.excluirFilaEspera(incubandoId);
       mostrarMsg('sucesso', `${item.nome_empresa} incubada no Box ${boxCad.numero}!`);
       setIncubandoId(null); setBoxSelecionado('');
-      await Promise.all([carregarFila(), carregarDados(), carregarEmpresas()]);
+      await Promise.all([carregarFila(), carregarDados(), carregarEmpresas(), carregarBoxes()]);
     };
 
     // Boxes disponíveis (não ocupados)
