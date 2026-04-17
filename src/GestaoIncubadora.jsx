@@ -786,23 +786,6 @@ const GestaoIncubadora = () => {
   };
 
   // ==================== EMPRESAS DESATIVADAS ====================
-  const EmpresasDesativadas = () => (
-    <div>
-      <h1 style={{ marginBottom: 24, fontSize: 24, fontWeight: 700 }}>Empresas Desativadas</h1>
-      {empresasDesativadas.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: 40, color: CORES.textoSecundario, background: CORES.fundo, borderRadius: 10 }}>Nenhuma empresa desativada</div>
-      ) : empresasDesativadas.map(e => (
-        <div key={e.id} style={{ background: 'white', border: `1px solid ${CORES.bordas}`, borderRadius: 10, padding: 16, marginBottom: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 4 }}>{e.nome_empresa}</div>
-            <div style={{ fontSize: 12, color: CORES.textoSecundario }}>CNPJ: {e.cnpj} · Saída: {new Date(e.data_saida).toLocaleDateString('pt-BR')}</div>
-          </div>
-          <Btn cor={CORES.sucesso} small onClick={() => reativarEmpresa(e.empresa_id)} disabled={carregando}>Reativar</Btn>
-        </div>
-      ))}
-    </div>
-  );
-
   // ==================== FILA DE ESPERA ====================
   const FilaEspera = () => {
     const [mostrarForm, setMostrarForm] = useState(false);
