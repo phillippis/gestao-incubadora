@@ -908,19 +908,18 @@ const GestaoIncubadora = () => {
               <div style={{ textAlign: 'center', padding: 40, color: CORES.textoSecundario, background: CORES.fundo, borderRadius: 10 }}>Nenhum box cadastrado.</div>
             ) : (() => {
               // Mapa: "incubadora_id|numero_box" -> empresa
-              // Para cada empresa, pegar seus boxes do cadastro e mapear incubadora
+              // Para cada box do cadastro, verificar se alguma empresa o ocupa
               const mapaBoxEmpresa = {};
-              empresas.forEach(e => {
-                if (!e.boxes_numeros) return;
-                const nums = String(e.boxes_numeros).split(',').map(n => n.trim());
-                nums.forEach(num => {
-                  // Encontrar qual incubadora tem esse box número
-                  const bc = boxesCadastro.find(x => String(x.numero) === num);
-                  if (bc) {
-                    const chave = `${bc.incubadora_id}|${num}`;
-                    mapaBoxEmpresa[chave] = e;
-                  }
+              boxesCadastro.forEach(bc => {
+                const empresaOcupante = empresas.find(e => {
+                  if (!e.boxes_numeros) return false;
+                  const nums = String(e.boxes_numeros).split(',').map(n => n.trim());
+                  return nums.includes(String(bc.numero));
                 });
+                if (empresaOcupante) {
+                  const chave = bc.incubadora_id + '|' + bc.numero;
+                  mapaBoxEmpresa[chave] = empresaOcupante;
+                }
               });
 
               const boxesFiltrados = boxesCadastro.filter(b => {
