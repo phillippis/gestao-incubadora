@@ -326,7 +326,7 @@ const GestaoIncubadora = () => {
     } : {
       nomeEmpresa: '', cnpj: '', inscricaoMunicipal: '', telefonePrincipal: '',
       telefoneSecundario: '', numeroFuncionarios: '', atividade: '', email: '', porte: '',
-      boxes: [{ numero: boxInicial?.numero || '', dataEntrada: new Date().toISOString().split('T')[0] }],
+      boxes: [{ numero: boxInicial?.numero || '', dataEntrada: new Date().toISOString().split('T')[0], incubadoraId: boxInicial?.incubadoraId || '' }],
       obrigacoes: []
     };
     const [form, setForm] = useState(formInicial);
@@ -368,7 +368,11 @@ const GestaoIncubadora = () => {
           </div>
           {form.boxes.map((box, i) => (
             <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-              <Select value={box.numero} onChange={e => handleBoxChange(i, 'numero', e.target.value)} style={{ flex: '0 0 160px' }}>
+              <Select value={box.numero} onChange={e => {
+                const selectedBox = boxesCadastro.find(b => String(b.numero) === String(e.target.value));
+                const updatedBox = { ...box, numero: e.target.value, incubadoraId: selectedBox?.incubadora_id || '' };
+                const newBoxes = [...form.boxes]; newBoxes[i] = updatedBox; setForm({ ...form, boxes: newBoxes });
+              }} style={{ flex: '0 0 160px' }}>
                 <option value="">Box...</option>
                 {boxesCadastro.map(b => {
                   const inc = incubadoras.find(i => i.id === b.incubadora_id);
