@@ -1105,8 +1105,7 @@ const GestaoIncubadora = () => {
                             })}
                           </div>
                         );
-                      })()
-                      )}
+                      })()}
                     </div>
                   );
                 })}
