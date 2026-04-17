@@ -907,17 +907,27 @@ const GestaoIncubadora = () => {
             {boxesCadastro.length === 0 ? (
               <div style={{ textAlign: 'center', padding: 40, color: CORES.textoSecundario, background: CORES.fundo, borderRadius: 10 }}>Nenhum box cadastrado.</div>
             ) : (() => {
-              // Calcular quais boxes estão ocupados
-              const boxesOcupados = new Set(
-                empresas.flatMap(e =>
-                  e.boxes_numeros ? String(e.boxes_numeros).split(',').map(n => n.trim()) : []
-                )
-              );
+              // Mapa: "incubadora_id|numero_box" -> empresa
+              // Para cada empresa, pegar seus boxes do cadastro e mapear incubadora
+              const mapaBoxEmpresa = {};
+              empresas.forEach(e => {
+                if (!e.boxes_numeros) return;
+                const nums = String(e.boxes_numeros).split(',').map(n => n.trim());
+                nums.forEach(num => {
+                  // Encontrar qual incubadora tem esse box número
+                  const bc = boxesCadastro.find(x => String(x.numero) === num);
+                  if (bc) {
+                    const chave = `${bc.incubadora_id}|${num}`;
+                    mapaBoxEmpresa[chave] = e;
+                  }
+                });
+              });
 
               const boxesFiltrados = boxesCadastro.filter(b => {
-                const ocupado = boxesOcupados.has(String(b.numero));
-                if (filtroBoxStatus === 'disponivel') return !ocupado;
-                if (filtroBoxStatus === 'ocupado') return ocupado;
+                const incB = incubadoras.find(i => i.id === b.incubadora_id);
+                const ocup = incB ? !!mapaBoxEmpresa[incB.id + '|' + b.numero] : false;
+                if (filtroBoxStatus === 'disponivel') return !ocup;
+                if (filtroBoxStatus === 'ocupado') return ocup;
                 return true;
               });
 
@@ -934,20 +944,9 @@ const GestaoIncubadora = () => {
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 10 }}>
                     {boxes.map(b => {
-                      const ocupado = boxesOcupados.has(String(b.numero));
-                      // Encontrar empresa considerando a incubadora correta
-                      const empresaDoBox = ocupado ? (() => {
-                        return empresas.find(e => {
-                          if (!e.boxes_numeros) return false;
-                          const nums = String(e.boxes_numeros).split(',').map(n => n.trim());
-                          if (!nums.includes(String(b.numero))) return false;
-                          // Verificar se algum box da empresa pertence a esta incubadora
-                          return nums.some(num => {
-                            const bc = boxesCadastro.find(x => String(x.numero) === num && x.incubadora_id === inc.id);
-                            return !!bc;
-                          });
-                        });
-                      })() : null;
+                      const chaveBox = `${inc.id}|${b.numero}`;
+                      const empresaDoBox = mapaBoxEmpresa[chaveBox] || null;
+                      const ocupado = !!empresaDoBox;
 
                       return (
                         <div key={b.id} style={{ background: 'white', border: `1px solid ${ocupado ? CORES.bordas : CORES.sucesso}`, borderRadius: 10, padding: '12px 12px 10px', position: 'relative' }}>
