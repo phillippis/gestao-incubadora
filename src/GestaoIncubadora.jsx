@@ -697,17 +697,32 @@ const GestaoIncubadora = () => {
           </button>
           {filterVisible && (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto', gap: 10, padding: 14, background: CORES.fundo, borderRadius: 8, border: `1px solid ${CORES.bordas}`, alignItems: 'end' }}>
-              <Input label="Buscar por nome ou CNPJ" value={filtros.busca} onChange={e => setFiltros({ ...filtros, busca: e.target.value })} />
-              <Select label="Atividade" value={filtros.atividade} onChange={e => setFiltros({ ...filtros, atividade: e.target.value })}>
-                <option value="">Todas atividades</option>
-                {listaAtividades.map(a => <option key={a} value={a}>{a}</option>)}
-              </Select>
-              <Select label="Incubadora" value={filtros.incubadora} onChange={e => setFiltros({ ...filtros, incubadora: e.target.value })}>
-                <option value="">Todas as incubadoras</option>
-                {incubadoras.map(i => <option key={i.id} value={String(i.numero)}>Incubadora {i.numero}{i.endereco ? ` — ${i.endereco}` : ''}</option>)}
-              </Select>
+              <div>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: CORES.textoSecundario, marginBottom: 4 }}>Buscar por nome ou CNPJ</label>
+                <input
+                  type="text"
+                  value={filtros.busca}
+                  onChange={e => setFiltros(f => ({ ...f, busca: e.target.value }))}
+                  placeholder="Digite para buscar..."
+                  style={{ width: '100%', padding: '8px 10px', border: `1px solid ${CORES.bordas}`, borderRadius: 6, fontSize: 14, boxSizing: 'border-box' }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: CORES.textoSecundario, marginBottom: 4 }}>Atividade</label>
+                <select value={filtros.atividade} onChange={e => setFiltros(f => ({ ...f, atividade: e.target.value }))} style={{ width: '100%', padding: '8px 10px', border: `1px solid ${CORES.bordas}`, borderRadius: 6, fontSize: 14, boxSizing: 'border-box', background: 'white' }}>
+                  <option value="">Todas atividades</option>
+                  {listaAtividades.map(a => <option key={a} value={a}>{a}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: CORES.textoSecundario, marginBottom: 4 }}>Incubadora</label>
+                <select value={filtros.incubadora} onChange={e => setFiltros(f => ({ ...f, incubadora: e.target.value }))} style={{ width: '100%', padding: '8px 10px', border: `1px solid ${CORES.bordas}`, borderRadius: 6, fontSize: 14, boxSizing: 'border-box', background: 'white' }}>
+                  <option value="">Todas as incubadoras</option>
+                  {incubadoras.map(i => <option key={i.id} value={String(i.numero)}>Incubadora {i.numero}{i.endereco ? ` — ${i.endereco}` : ''}</option>)}
+                </select>
+              </div>
               <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, cursor: 'pointer', paddingBottom: 2 }}>
-                <input type="checkbox" checked={filtros.apenasPendentes} onChange={e => setFiltros({ ...filtros, apenasPendentes: e.target.checked })} />
+                <input type="checkbox" checked={filtros.apenasPendentes} onChange={e => setFiltros(f => ({ ...f, apenasPendentes: e.target.checked }))} />
                 Só pendências
               </label>
             </div>
