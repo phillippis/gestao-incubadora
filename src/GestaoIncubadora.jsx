@@ -1087,14 +1087,23 @@ const GestaoIncubadora = () => {
                           <Btn small cor={CORES.perigo} onClick={() => excluirIncubadoraLocal(inc.id)}><Trash2 size={13} /></Btn>
                         </div>
                       </div>
-                      {boxesDaInc.length > 0 && (
-                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
-                          {boxesDaInc.map(b => (
-                            <span key={b.id} style={{ background: CORES.fundo, border: `1px solid ${CORES.bordas}`, borderRadius: 6, padding: '3px 10px', fontSize: 12, fontWeight: 600, color: CORES.textoSecundario }}>
-                              Box {b.numero}
-                            </span>
-                          ))}
-                        </div>
+                      {boxesDaInc.length > 0 && (() => {
+                        const boxesOcupadosInc = new Set(
+                          vinculosBoxes.filter(v => v.incubadora_id === inc.id).map(v => String(v.numero))
+                        );
+                        return (
+                          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
+                            {boxesDaInc.map(b => {
+                              const ocup = boxesOcupadosInc.has(String(b.numero));
+                              return (
+                                <button key={b.id} onClick={() => setAba('boxes')} style={{ background: ocup ? CORES.fundo : '#f0fdf4', border: `1px solid ${ocup ? CORES.bordas : CORES.sucesso}`, borderRadius: 6, padding: '3px 10px', fontSize: 12, fontWeight: 600, color: ocup ? CORES.textoSecundario : CORES.sucesso, cursor: 'pointer' }}>
+                                  Box {b.numero}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        );
+                      })()
                       )}
                     </div>
                   );
@@ -1149,13 +1158,18 @@ const GestaoIncubadora = () => {
               <div style={{ textAlign: 'center', padding: 40, color: CORES.textoSecundario, background: CORES.fundo, borderRadius: 10 }}>Nenhum box cadastrado.</div>
             ) : (() => {
               // Mapa: "incubadora_id|numero_box" -> empresa
-              // vinculosBoxes agora traz incubadora_id diretamente via join
               const mapaBoxEmpresa = {};
               vinculosBoxes.forEach(v => {
-                if (!v.incubadora_id) return;
                 const emp = empresas.find(e => e.id === v.empresa_id);
-                if (emp) {
+                if (!emp) return;
+                if (v.incubadora_id) {
                   mapaBoxEmpresa[v.incubadora_id + '|' + v.numero] = emp;
+                } else {
+                  // fallback para vínculos legados sem incubadora_id
+                  const bc = boxesCadastro.find(x => String(x.numero) === String(v.numero));
+                  if (bc && bc.incubadora_id) {
+                    mapaBoxEmpresa[bc.incubadora_id + '|' + v.numero] = emp;
+                  }
                 }
               });
 
@@ -1194,7 +1208,8 @@ const GestaoIncubadora = () => {
 
                           {/* Número do box — clicável */}
                           <button
-                            onClick={() => {
+                            onClick={e => {
+                              e.stopPropagation();
                               if (ocupado && empresaDoBox) {
                                 setEmpresaEmEdicao(empresaDoBox);
                               } else {
