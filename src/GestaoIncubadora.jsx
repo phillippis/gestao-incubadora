@@ -99,6 +99,7 @@ const GestaoIncubadora = () => {
   const [empresaControlesAberta, setEmpresaControlesAberta] = useState(null);
   const [filtroBoxStatus, setFiltroBoxStatus] = useState('todos');
   const [boxPreSelecionado, setBoxPreSelecionado] = useState(null);
+  const [vinculosBoxes, setVinculosBoxes] = useState([]); // {empresa_id, numero}
   const [filaEspera, setFilaEspera] = useState([]);
   const [mostrarDesativadas, setMostrarDesativadas] = useState(false);
 
@@ -156,12 +157,14 @@ const GestaoIncubadora = () => {
   };
 
   const carregarBoxes = async () => {
-    const [rBoxes, rIncubadoras] = await Promise.all([
+    const [rBoxes, rIncubadoras, rVinculos] = await Promise.all([
       API.listarBoxesCadastro(),
-      API.listarIncubadoras()
+      API.listarIncubadoras(),
+      API.listarVinculosBoxes()
     ]);
     if (rBoxes.sucesso) setBoxesCadastro(rBoxes.dados);
     if (rIncubadoras.sucesso) setIncubadoras(rIncubadoras.dados);
+    if (rVinculos.sucesso) setVinculosBoxes(rVinculos.dados);
   };
 
   const carregarControlesTipos = async () => {
@@ -1142,22 +1145,13 @@ const GestaoIncubadora = () => {
               <div style={{ textAlign: 'center', padding: 40, color: CORES.textoSecundario, background: CORES.fundo, borderRadius: 10 }}>Nenhum box cadastrado.</div>
             ) : (() => {
               // Mapa: "incubadora_id|numero_box" -> empresa
-              // Itera cada box cadastrado e verifica qual empresa o ocupa
+              // vinculosBoxes agora traz incubadora_id diretamente via join
               const mapaBoxEmpresa = {};
-              boxesCadastro.forEach(bc => {
-                if (!bc.incubadora_id) return;
-                const emp = empresas.find(e => {
-                  if (!e.boxes_numeros) return false;
-                  return String(e.boxes_numeros).split(',').map(n => n.trim()).includes(String(bc.numero));
-                });
-                // Só vincular se a empresa tem pelo menos um box nessa incubadora
+              vinculosBoxes.forEach(v => {
+                if (!v.incubadora_id) return;
+                const emp = empresas.find(e => e.id === v.empresa_id);
                 if (emp) {
-                  const temNessaInc = String(emp.boxes_numeros || '').split(',').map(n => n.trim()).some(num => {
-                    return boxesCadastro.some(x => String(x.numero) === num && x.incubadora_id === bc.incubadora_id);
-                  });
-                  if (temNessaInc) {
-                    mapaBoxEmpresa[bc.incubadora_id + '|' + bc.numero] = emp;
-                  }
+                  mapaBoxEmpresa[v.incubadora_id + '|' + v.numero] = emp;
                 }
               });
 
