@@ -99,6 +99,8 @@ const GestaoIncubadora = () => {
   const [empresaControlesAberta, setEmpresaControlesAberta] = useState(null);
   const [filtroBoxStatus, setFiltroBoxStatus] = useState('todos');
   const [boxPreSelecionado, setBoxPreSelecionado] = useState(null);
+  const [filaEspera, setFilaEspera] = useState([]);
+  const [mostrarDesativadas, setMostrarDesativadas] = useState(false);
 
   const listaAtividades = [
     'Serviços de Serralheria','Consultoria','Tecnologia','Design','Alimentos',
@@ -132,7 +134,7 @@ const GestaoIncubadora = () => {
       const { usuario: u } = await API.obterUsuarioAtual();
       if (u) {
         setUsuario(u);
-        await Promise.all([carregarDados(), carregarBoxes(), carregarControlesTipos(), carregarPendencias()]);
+        await Promise.all([carregarDados(), carregarBoxes(), carregarControlesTipos(), carregarPendencias(), carregarFila()]);
       } else {
         setAtivaPagina('login');
       }
@@ -170,6 +172,11 @@ const GestaoIncubadora = () => {
   const carregarPendencias = async () => {
     const r = await API.listarEmpresasComPendencias();
     if (r.sucesso) setEmpresasComPendencias(r.dados);
+  };
+
+  const carregarFila = async () => {
+    const r = await API.listarFilaEspera();
+    if (r.sucesso) setFilaEspera(r.dados);
   };
 
   const mostrarMsg = (tipo, texto) => {
@@ -270,7 +277,7 @@ const GestaoIncubadora = () => {
       const r = await API.autenticar(email, senha);
       if (r.sucesso) {
         setUsuario(r.usuario); setAtivaPagina('dashboard');
-        await Promise.all([carregarDados(), carregarBoxes(), carregarControlesTipos(), carregarPendencias()]);
+        await Promise.all([carregarDados(), carregarBoxes(), carregarControlesTipos(), carregarPendencias(), carregarFila()]);
       } else { setErro('E-mail ou senha inválidos.'); }
       setLoading(false);
     };
@@ -646,8 +653,34 @@ const GestaoIncubadora = () => {
       <div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 22 }}>
           <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700 }}>Empresas <span style={{ fontSize: 14, fontWeight: 400, color: CORES.textoSecundario }}>({empresasFiltradas.length})</span></h1>
-          <Btn onClick={() => setMostrarFormulario(true)}><Plus size={16} /> Adicionar Empresa</Btn>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <Btn outline cor={CORES.textoSecundario} onClick={() => setMostrarDesativadas(!mostrarDesativadas)}>
+              📁 Desativadas {empresasDesativadas.length > 0 && `(${empresasDesativadas.length})`}
+            </Btn>
+            <Btn onClick={() => setMostrarFormulario(true)}><Plus size={16} /> Adicionar Empresa</Btn>
+          </div>
         </div>
+
+        {/* Seção desativadas expansível */}
+        {mostrarDesativadas && (
+          <div style={{ background: '#fafafa', border: `1px solid ${CORES.bordas}`, borderRadius: 10, padding: 16, marginBottom: 20 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <span style={{ fontWeight: 700, fontSize: 14, color: CORES.textoSecundario }}>📁 Empresas Desativadas</span>
+              <button onClick={() => setMostrarDesativadas(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: CORES.textoSecundario }}><X size={16} /></button>
+            </div>
+            {empresasDesativadas.length === 0 ? (
+              <p style={{ textAlign: 'center', color: CORES.textoSecundario, fontSize: 13 }}>Nenhuma empresa desativada.</p>
+            ) : empresasDesativadas.map(e => (
+              <div key={e.id} style={{ background: 'white', border: `1px solid ${CORES.bordas}`, borderRadius: 8, padding: '10px 14px', marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <div style={{ fontWeight: 600, fontSize: 14 }}>{e.nome_empresa}</div>
+                  <div style={{ fontSize: 12, color: CORES.textoSecundario }}>CNPJ: {e.cnpj} · Saída: {new Date(e.data_saida).toLocaleDateString('pt-BR')}</div>
+                </div>
+                <Btn cor={CORES.sucesso} small onClick={() => reativarEmpresa(e.empresa_id)} disabled={carregando}>Reativar</Btn>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Filtros */}
         <div style={{ marginBottom: 20 }}>
@@ -769,6 +802,208 @@ const GestaoIncubadora = () => {
       ))}
     </div>
   );
+
+  // ==================== FILA DE ESPERA ====================
+  const FilaEspera = () => {
+    const [mostrarForm, setMostrarForm] = useState(false);
+    const [itemEmEdicao, setItemEmEdicao] = useState(null);
+    const [incubandoId, setIncubandoId] = useState(null); // id da empresa em processo de incubação
+    const [boxSelecionado, setBoxSelecionado] = useState('');
+    const [form, setForm] = useState({
+      nomeEmpresa: '', cnpj: '', telefonePrincipal: '', telefoneSecundario: '',
+      email: '', atividade: '', porte: '', numeroFuncionarios: '',
+      inscricaoMunicipal: '', dataEntradaFila: new Date().toISOString().split('T')[0], observacoes: ''
+    });
+
+    const resetForm = () => setForm({
+      nomeEmpresa: '', cnpj: '', telefonePrincipal: '', telefoneSecundario: '',
+      email: '', atividade: '', porte: '', numeroFuncionarios: '',
+      inscricaoMunicipal: '', dataEntradaFila: new Date().toISOString().split('T')[0], observacoes: ''
+    });
+
+    const abrirNovo = () => { resetForm(); setItemEmEdicao(null); setMostrarForm(true); };
+    const abrirEdicao = (item) => {
+      setForm({
+        nomeEmpresa: item.nome_empresa || '',
+        cnpj: item.cnpj || '',
+        telefonePrincipal: item.telefone_principal || '',
+        telefoneSecundario: item.telefone_secundario || '',
+        email: item.email_empresa || '',
+        atividade: item.atividade || '',
+        porte: item.porte || '',
+        numeroFuncionarios: item.numero_funcionarios || '',
+        inscricaoMunicipal: item.inscricao_municipal || '',
+        dataEntradaFila: item.data_entrada_fila || new Date().toISOString().split('T')[0],
+        observacoes: item.observacoes || ''
+      });
+      setItemEmEdicao(item);
+      setMostrarForm(true);
+    };
+
+    const salvar = async () => {
+      if (!form.nomeEmpresa) { mostrarMsg('erro', 'Nome da empresa é obrigatório'); return; }
+      if (!form.dataEntradaFila) { mostrarMsg('erro', 'Data de entrada na fila é obrigatória'); return; }
+      const r = itemEmEdicao
+        ? await API.atualizarFilaEspera(itemEmEdicao.id, form, usuario.email)
+        : await API.criarFilaEspera(form, usuario.email);
+      if (r.sucesso) {
+        mostrarMsg('sucesso', itemEmEdicao ? 'Cadastro atualizado' : 'Empresa adicionada à fila');
+        setMostrarForm(false); resetForm(); setItemEmEdicao(null);
+        await carregarFila();
+      } else mostrarMsg('erro', r.erro);
+    };
+
+    const excluir = async (id) => {
+      if (!window.confirm('Remover esta empresa da fila?')) return;
+      const r = await API.excluirFilaEspera(id);
+      if (r.sucesso) { mostrarMsg('sucesso', 'Removido da fila'); await carregarFila(); }
+      else mostrarMsg('erro', r.erro);
+    };
+
+    const incubar = async () => {
+      if (!boxSelecionado) { mostrarMsg('erro', 'Selecione um box'); return; }
+      const item = filaEspera.find(f => f.id === incubandoId);
+      if (!item) return;
+
+      const boxCad = boxesCadastro.find(b => b.id === boxSelecionado);
+      if (!boxCad) return;
+
+      // Criar empresa com os dados da fila
+      const dadosEmpresa = {
+        nomeEmpresa: item.nome_empresa,
+        cnpj: item.cnpj,
+        inscricaoMunicipal: item.inscricao_municipal,
+        telefonePrincipal: item.telefone_principal,
+        telefoneSecundario: item.telefone_secundario,
+        numeroFuncionarios: item.numero_funcionarios,
+        atividade: item.atividade,
+        email: item.email_empresa,
+        porte: item.porte,
+        boxes: [{ numero: boxCad.numero, dataEntrada: new Date().toISOString().split('T')[0] }],
+        obrigacoes: []
+      };
+
+      const rEmpresa = await API.criarEmpresa(dadosEmpresa, usuario.email);
+      if (!rEmpresa.sucesso) { mostrarMsg('erro', rEmpresa.erro); return; }
+
+      // Remover da fila
+      await API.excluirFilaEspera(incubandoId);
+      mostrarMsg('sucesso', `${item.nome_empresa} incubada no Box ${boxCad.numero}!`);
+      setIncubandoId(null); setBoxSelecionado('');
+      await Promise.all([carregarFila(), carregarDados(), carregarEmpresas()]);
+    };
+
+    // Boxes disponíveis (não ocupados)
+    const boxesOcupados = new Set(
+      empresas.flatMap(e => e.boxes_numeros ? String(e.boxes_numeros).split(',').map(n => n.trim()) : [])
+    );
+    const boxesDisponiveis = boxesCadastro.filter(b => !boxesOcupados.has(String(b.numero)));
+
+    return (
+      <div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 22 }}>
+          <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700 }}>
+            Fila de Espera
+            <span style={{ fontSize: 14, fontWeight: 400, color: CORES.textoSecundario, marginLeft: 8 }}>({filaEspera.length})</span>
+          </h1>
+          <Btn onClick={abrirNovo}><Plus size={16} /> Adicionar à Fila</Btn>
+        </div>
+
+        {/* Modal formulário */}
+        {mostrarForm && (
+          <Modal titulo={itemEmEdicao ? 'Editar Cadastro da Fila' : 'Adicionar à Fila de Espera'} onFechar={() => { setMostrarForm(false); resetForm(); }} largura={760}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+              <Input label="Nome da Empresa *" value={form.nomeEmpresa} onChange={e => setForm({ ...form, nomeEmpresa: e.target.value })} />
+              <Input label="CNPJ" value={form.cnpj} onChange={e => setForm({ ...form, cnpj: e.target.value })} />
+              <Input label="Inscrição Municipal" value={form.inscricaoMunicipal} onChange={e => setForm({ ...form, inscricaoMunicipal: e.target.value })} />
+              <Select label="Atividade" value={form.atividade} onChange={e => setForm({ ...form, atividade: e.target.value })}>
+                <option value="">Selecione...</option>
+                {listaAtividades.map(a => <option key={a} value={a}>{a}</option>)}
+              </Select>
+              <Input label="Telefone Principal" type="tel" value={form.telefonePrincipal} onChange={e => setForm({ ...form, telefonePrincipal: e.target.value })} />
+              <Input label="Telefone Secundário" type="tel" value={form.telefoneSecundario} onChange={e => setForm({ ...form, telefoneSecundario: e.target.value })} />
+              <Input label="E-mail" type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
+              <Select label="Porte" value={form.porte} onChange={e => setForm({ ...form, porte: e.target.value })}>
+                <option value="">Selecione...</option>
+                <option value="MEI">MEI</option>
+                <option value="ME">ME — Microempresa</option>
+                <option value="EPP">EPP — Empresa de Pequeno Porte</option>
+                <option value="Médio">Médio Porte</option>
+                <option value="Grande">Grande Porte</option>
+              </Select>
+              <Input label="Nº de Funcionários" type="number" value={form.numeroFuncionarios} onChange={e => setForm({ ...form, numeroFuncionarios: e.target.value })} />
+              <Input label="Data de Entrada na Fila *" type="date" value={form.dataEntradaFila} onChange={e => setForm({ ...form, dataEntradaFila: e.target.value })} />
+            </div>
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: CORES.textoSecundario, marginBottom: 4 }}>Observações</label>
+              <textarea value={form.observacoes} onChange={e => setForm({ ...form, observacoes: e.target.value })} rows={2} style={{ width: '100%', padding: '8px 10px', border: `1px solid ${CORES.bordas}`, borderRadius: 6, fontSize: 14, boxSizing: 'border-box', resize: 'vertical' }} />
+            </div>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <Btn outline cor={CORES.principal} onClick={() => { setMostrarForm(false); resetForm(); }}>Cancelar</Btn>
+              <Btn onClick={salvar}>{itemEmEdicao ? 'Salvar' : 'Adicionar à Fila'}</Btn>
+            </div>
+          </Modal>
+        )}
+
+        {/* Modal incubar */}
+        {incubandoId && (
+          <Modal titulo="Incubar Empresa" onFechar={() => { setIncubandoId(null); setBoxSelecionado(''); }} largura={460}>
+            <p style={{ fontSize: 14, color: CORES.textoSecundario, marginBottom: 16 }}>
+              Selecione o box disponível para <strong style={{ color: CORES.texto }}>{filaEspera.find(f => f.id === incubandoId)?.nome_empresa}</strong>:
+            </p>
+            {boxesDisponiveis.length === 0 ? (
+              <div style={{ background: '#fffbeb', border: `1px solid ${CORES.aviso}`, borderRadius: 8, padding: 14, fontSize: 13, color: '#92400e' }}>
+                ⚠ Não há boxes disponíveis no momento.
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 8, marginBottom: 20 }}>
+                {boxesDisponiveis.map(b => {
+                  const inc = incubadoras.find(i => i.id === b.incubadora_id);
+                  return (
+                    <button key={b.id} onClick={() => setBoxSelecionado(b.id)} style={{ padding: '10px 8px', borderRadius: 8, border: `2px solid ${boxSelecionado === b.id ? CORES.sucesso : CORES.bordas}`, background: boxSelecionado === b.id ? '#f0fdf4' : 'white', cursor: 'pointer', textAlign: 'center' }}>
+                      <div style={{ fontWeight: 700, fontSize: 14, color: CORES.sucesso }}>Box {b.numero}</div>
+                      {inc && <div style={{ fontSize: 11, color: CORES.textoSecundario, marginTop: 2 }}>Inc. {inc.numero}</div>}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <Btn outline cor={CORES.principal} onClick={() => { setIncubandoId(null); setBoxSelecionado(''); }}>Cancelar</Btn>
+              <Btn cor={CORES.sucesso} disabled={!boxSelecionado || boxesDisponiveis.length === 0} onClick={incubar}>🏭 Confirmar Incubação</Btn>
+            </div>
+          </Modal>
+        )}
+
+        {/* Lista fila */}
+        {filaEspera.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: 40, color: CORES.textoSecundario, background: CORES.fundo, borderRadius: 10 }}>
+            Nenhuma empresa na fila de espera.
+          </div>
+        ) : filaEspera.map((item, idx) => (
+          <div key={item.id} style={{ background: 'white', border: `1px solid ${CORES.bordas}`, borderRadius: 10, padding: '14px 16px', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div style={{ background: CORES.aviso, color: 'white', borderRadius: 8, padding: '6px 12px', fontWeight: 700, fontSize: 16, flexShrink: 0 }}>
+              #{idx + 1}
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 3 }}>{item.nome_empresa}</div>
+              <div style={{ fontSize: 12, color: CORES.textoSecundario }}>
+                {item.cnpj && `CNPJ: ${item.cnpj} · `}
+                {item.atividade && `${item.atividade} · `}
+                Na fila desde: <strong>{new Date(item.data_entrada_fila + 'T12:00:00').toLocaleDateString('pt-BR')}</strong>
+              </div>
+              {item.observacoes && <div style={{ fontSize: 12, color: CORES.textoSecundario, fontStyle: 'italic', marginTop: 2 }}>{item.observacoes}</div>}
+            </div>
+            <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+              <Btn small cor={CORES.sucesso} onClick={() => { setIncubandoId(item.id); setBoxSelecionado(''); }}>🏭 Incubar</Btn>
+              <Btn small outline cor={CORES.principal} onClick={() => abrirEdicao(item)}>Editar</Btn>
+              <Btn small cor={CORES.perigo} onClick={() => excluir(item.id)}><Trash2 size={13} /></Btn>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
 
   // ==================== GESTÃO DE BOXES ====================
   const GestaoBoxes = () => {
@@ -1255,7 +1490,7 @@ const GestaoIncubadora = () => {
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: '📊' },
     { id: 'empresas', label: 'Empresas', icon: '🏢' },
-    { id: 'desativadas', label: 'Desativadas', icon: '📁' },
+    { id: 'fila', label: 'Fila de Espera', icon: '⏳' },
     { id: 'boxes', label: 'Boxes', icon: '📦' },
     { id: 'controles', label: 'Controles', icon: '✅' },
   ];
@@ -1298,7 +1533,7 @@ const GestaoIncubadora = () => {
         <div style={{ flex: 1, padding: 32, overflowY: 'auto', height: 'calc(100vh - 58px)' }}>
           {ativaPagina === 'dashboard' && <Dashboard />}
           {ativaPagina === 'empresas' && <ListaEmpresas />}
-          {ativaPagina === 'desativadas' && <EmpresasDesativadas />}
+          {ativaPagina === 'fila' && <FilaEspera />}
           {ativaPagina === 'boxes' && <GestaoBoxes />}
           {ativaPagina === 'controles' && <GestaoControles />}
         </div>
