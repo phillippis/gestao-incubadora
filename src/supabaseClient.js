@@ -858,7 +858,7 @@ export const criarIncubadora = async (dados) => {
   try {
     const { data, error } = await supabase
       .from('incubadoras')
-      .insert([{ numero: dados.numero, endereco: dados.endereco, observacoes: dados.observacoes, incubadora_id: dados.incubadoraId || null, ativo: true }])
+      .insert([{ numero: dados.numero, endereco: dados.endereco, observacoes: dados.observacoes, ativo: true }])
       .select().single();
     if (error) throw error;
     return { sucesso: true, dados: data, erro: null };
