@@ -936,11 +936,11 @@ export const removerBoxEmpresa = async (boxId) => {
   }
 };
 
-export const adicionarBoxEmpresa = async (empresaId, numero) => {
+export const adicionarBoxEmpresa = async (empresaId, numero, incubadoraId = null) => {
   try {
     const { error } = await supabase
       .from('boxes')
-      .insert([{ empresa_id: empresaId, numero, data_entrada: new Date().toISOString().split('T')[0], ativo: true }]);
+      .insert([{ empresa_id: empresaId, numero, incubadora_id: incubadoraId, data_entrada: new Date().toISOString().split('T')[0], ativo: true }]);
     if (error) throw error;
     return { sucesso: true, erro: null };
   } catch (erro) {
@@ -1026,5 +1026,18 @@ export const excluirFilaEspera = async (id) => {
     return { sucesso: true, erro: null };
   } catch (erro) {
     return { sucesso: false, erro: erro.message };
+  }
+};
+
+export const listarVinculosBoxes = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('boxes')
+      .select('empresa_id, numero, incubadora_id')
+      .eq('ativo', true);
+    if (error) throw error;
+    return { sucesso: true, dados: data, erro: null };
+  } catch (erro) {
+    return { sucesso: false, dados: [], erro: erro.message };
   }
 };
