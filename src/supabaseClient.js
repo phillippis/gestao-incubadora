@@ -947,3 +947,84 @@ export const adicionarBoxEmpresa = async (empresaId, numero) => {
     return { sucesso: false, erro: erro.message };
   }
 };
+
+// ==================== FUNÇÕES DE FILA DE ESPERA ====================
+
+export const listarFilaEspera = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('fila_espera')
+      .select('*')
+      .eq('status', 'aguardando')
+      .order('data_entrada_fila');
+    if (error) throw error;
+    return { sucesso: true, dados: data, erro: null };
+  } catch (erro) {
+    return { sucesso: false, dados: [], erro: erro.message };
+  }
+};
+
+export const criarFilaEspera = async (dados, usuarioEmail) => {
+  try {
+    const { data, error } = await supabase
+      .from('fila_espera')
+      .insert([{
+        nome_empresa: dados.nomeEmpresa,
+        cnpj: dados.cnpj || null,
+        telefone_principal: dados.telefonePrincipal || null,
+        telefone_secundario: dados.telefoneSecundario || null,
+        email_empresa: dados.email || null,
+        atividade: dados.atividade || null,
+        porte: dados.porte || null,
+        numero_funcionarios: dados.numeroFuncionarios ? parseInt(dados.numeroFuncionarios) : null,
+        inscricao_municipal: dados.inscricaoMunicipal || null,
+        data_entrada_fila: dados.dataEntradaFila,
+        observacoes: dados.observacoes || null,
+        status: 'aguardando',
+        criado_por: usuarioEmail,
+      }])
+      .select().single();
+    if (error) throw error;
+    return { sucesso: true, dados: data, erro: null };
+  } catch (erro) {
+    return { sucesso: false, dados: null, erro: erro.message };
+  }
+};
+
+export const atualizarFilaEspera = async (id, dados, usuarioEmail) => {
+  try {
+    const { error } = await supabase
+      .from('fila_espera')
+      .update({
+        nome_empresa: dados.nomeEmpresa,
+        cnpj: dados.cnpj || null,
+        telefone_principal: dados.telefonePrincipal || null,
+        telefone_secundario: dados.telefoneSecundario || null,
+        email_empresa: dados.email || null,
+        atividade: dados.atividade || null,
+        porte: dados.porte || null,
+        numero_funcionarios: dados.numeroFuncionarios ? parseInt(dados.numeroFuncionarios) : null,
+        inscricao_municipal: dados.inscricaoMunicipal || null,
+        data_entrada_fila: dados.dataEntradaFila,
+        observacoes: dados.observacoes || null,
+      })
+      .eq('id', id);
+    if (error) throw error;
+    return { sucesso: true, erro: null };
+  } catch (erro) {
+    return { sucesso: false, erro: erro.message };
+  }
+};
+
+export const excluirFilaEspera = async (id) => {
+  try {
+    const { error } = await supabase
+      .from('fila_espera')
+      .delete()
+      .eq('id', id);
+    if (error) throw error;
+    return { sucesso: true, erro: null };
+  } catch (erro) {
+    return { sucesso: false, erro: erro.message };
+  }
+};
