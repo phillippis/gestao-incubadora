@@ -98,6 +98,7 @@ const GestaoIncubadora = () => {
   const [mensagem, setMensagem] = useState({ tipo: '', texto: '', visivel: false });
   const [empresaControlesAberta, setEmpresaControlesAberta] = useState(null);
   const [filtroBoxStatus, setFiltroBoxStatus] = useState('todos');
+  const [abaBoxes, setAbaBoxes] = useState('incubadoras');
   const [boxPreSelecionado, setBoxPreSelecionado] = useState(null);
   const [vinculosBoxes, setVinculosBoxes] = useState([]); // {empresa_id, numero}
   const [filaEspera, setFilaEspera] = useState([]);
@@ -997,7 +998,8 @@ const GestaoIncubadora = () => {
 
   // ==================== GESTÃO DE BOXES ====================
   const GestaoBoxes = () => {
-    const [aba, setAba] = useState('incubadoras'); // 'incubadoras' | 'boxes'
+    const aba = abaBoxes;
+    const setAba = setAbaBoxes;
     const [mostrarForm, setMostrarForm] = useState(false);
     const [itemEmEdicao, setItemEmEdicao] = useState(null);
     const [form, setForm] = useState({});
@@ -1160,17 +1162,11 @@ const GestaoIncubadora = () => {
               // Mapa: "incubadora_id|numero_box" -> empresa
               const mapaBoxEmpresa = {};
               vinculosBoxes.forEach(v => {
-                const emp = empresas.find(e => e.id === v.empresa_id);
+                if (!v.incubadora_id) return; // ignorar vínculos sem incubadora
+                // buscar empresa pelo id OU pelo empresa_id (view pode usar campo diferente)
+                const emp = empresas.find(e => e.id === v.empresa_id || e.empresa_id === v.empresa_id);
                 if (!emp) return;
-                if (v.incubadora_id) {
-                  mapaBoxEmpresa[v.incubadora_id + '|' + v.numero] = emp;
-                } else {
-                  // fallback para vínculos legados sem incubadora_id
-                  const bc = boxesCadastro.find(x => String(x.numero) === String(v.numero));
-                  if (bc && bc.incubadora_id) {
-                    mapaBoxEmpresa[bc.incubadora_id + '|' + v.numero] = emp;
-                  }
-                }
+                mapaBoxEmpresa[v.incubadora_id + '|' + String(v.numero)] = emp;
               });
 
               const boxesFiltrados = boxesCadastro.filter(b => {
