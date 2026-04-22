@@ -536,7 +536,7 @@ const GestaoIncubadora = () => {
 
     const handleSolicitar = async () => {
       if (!nome.trim() || !emailSolic.trim()) { setErro('Preencha nome e e-mail.'); return; }
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailSolic)) { setErro('E-mail inválido.'); return; }
+      if (!emailSolic.includes('@') || !emailSolic.includes('.')) { setErro('E-mail inválido.'); return; }
       setErro(''); setLoading(true);
       try {
         const r = await API.criarSolicitacaoAcesso({ nome, email: emailSolic, motivo });
