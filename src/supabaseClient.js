@@ -163,7 +163,7 @@ export const criarEmpresa = async (empresaData, usuarioEmail) => {
           inscricao_municipal: empresaData.inscricaoMunicipal,
           telefone_principal: empresaData.telefonePrincipal,
           telefone_secundario: empresaData.telefoneSecundario,
-          numero_funcionarios: empresaData.numeroFuncionarios,
+          numero_funcionarios: empresaData.numeroFuncionarios ? parseInt(empresaData.numeroFuncionarios) : null,
           atividade: empresaData.atividade,
           email_empresa: empresaData.email || null,
           porte: empresaData.porte || null,
@@ -225,7 +225,7 @@ export const atualizarEmpresa = async (id, empresaData, usuarioEmail) => {
         inscricao_municipal: empresaData.inscricaoMunicipal,
         telefone_principal: empresaData.telefonePrincipal,
         telefone_secundario: empresaData.telefoneSecundario,
-        numero_funcionarios: empresaData.numeroFuncionarios,
+        numero_funcionarios: empresaData.numeroFuncionarios ? parseInt(empresaData.numeroFuncionarios) : null,
         atividade: empresaData.atividade,
         email_empresa: empresaData.email || null,
         porte: empresaData.porte || null,
@@ -366,6 +366,14 @@ export const reativarEmpresa = async (id, usuarioEmail) => {
       .eq('empresa_id', id);
 
     if (erroBoxes) throw erroBoxes;
+
+    // Remover da tabela de desincubadas
+    const { error: erroRemover } = await supabase
+      .from('empresas_desativadas')
+      .delete()
+      .eq('empresa_id', id);
+
+    if (erroRemover) throw erroRemover;
 
     return { sucesso: true, erro: null };
   } catch (erro) {
