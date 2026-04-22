@@ -78,6 +78,110 @@ const Modal = ({ titulo, onFechar, children, largura = 600 }) => (
   </div>
 );
 
+// ==================== FORMULÁRIO EMPRESA (fora do componente principal) ====================
+const FormularioEmpresa = ({ empresa = null, onSalvar, onCancelar, boxInicial = null, boxesCadastro = [], incubadoras = [], listaAtividades = [], carregando = false }) => {
+  const formInicial = empresa ? {
+    nomeEmpresa: empresa.nome_empresa || '',
+    cnpj: empresa.cnpj || '',
+    inscricaoMunicipal: empresa.inscricao_municipal || '',
+    telefonePrincipal: empresa.telefone_principal || '',
+    telefoneSecundario: empresa.telefone_secundario || '',
+    numeroFuncionarios: empresa.numero_funcionarios || '',
+    atividade: empresa.atividade || '',
+    email: empresa.email_empresa || '',
+    porte: empresa.porte || '',
+    boxes: empresa.boxes_numeros
+      ? String(empresa.boxes_numeros).split(',').map(n => ({ numero: n.trim(), dataEntrada: empresa.data_entrada_mais_antiga || new Date().toISOString().split('T')[0] }))
+      : [{ numero: '', dataEntrada: new Date().toISOString().split('T')[0] }],
+    obrigacoes: []
+  } : {
+    nomeEmpresa: '', cnpj: '', inscricaoMunicipal: '', telefonePrincipal: '',
+    telefoneSecundario: '', numeroFuncionarios: '', atividade: '', email: '', porte: '',
+    boxes: [{ numero: boxInicial?.numero || '', dataEntrada: new Date().toISOString().split('T')[0], incubadoraId: boxInicial?.incubadoraId || '' }],
+    obrigacoes: []
+  };
+  const [form, setForm] = useState(formInicial);
+  const [erroForm, setErroForm] = useState('');
+
+  const handleBoxChange = (i, campo, val) => {
+    const b = [...form.boxes]; b[i] = { ...b[i], [campo]: val }; setForm({ ...form, boxes: b });
+  };
+
+  return (
+    <Modal titulo={empresa ? 'Editar Empresa' : 'Adicionar Empresa'} onFechar={onCancelar} largura={800}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
+        <Input label="Nome da Empresa" value={form.nomeEmpresa} onChange={e => setForm({ ...form, nomeEmpresa: e.target.value })} />
+        <Input label="CNPJ" value={form.cnpj} onChange={e => setForm({ ...form, cnpj: e.target.value })} />
+        <Input label="Inscrição Municipal" value={form.inscricaoMunicipal} onChange={e => setForm({ ...form, inscricaoMunicipal: e.target.value })} />
+        <Select label="Atividade" value={form.atividade} onChange={e => setForm({ ...form, atividade: e.target.value })}>
+          <option value="">Selecione...</option>
+          {listaAtividades.map(a => <option key={a} value={a}>{a}</option>)}
+        </Select>
+        <Input label="Telefone Principal" type="tel" value={form.telefonePrincipal} onChange={e => setForm({ ...form, telefonePrincipal: e.target.value })} />
+        <Input label="Telefone Secundário" type="tel" value={form.telefoneSecundario} onChange={e => setForm({ ...form, telefoneSecundario: e.target.value })} />
+        <Input label="Nº de Funcionários" type="number" value={form.numeroFuncionarios} onChange={e => setForm({ ...form, numeroFuncionarios: e.target.value })} />
+        <Input label="E-mail" type="email" value={form.email || ''} onChange={e => setForm({ ...form, email: e.target.value })} placeholder="contato@empresa.com.br" />
+        <Select label="Porte da Empresa" value={form.porte || ''} onChange={e => setForm({ ...form, porte: e.target.value })}>
+          <option value="">Selecione...</option>
+          <option value="MEI">MEI</option>
+          <option value="ME">ME — Microempresa</option>
+          <option value="EPP">EPP — Empresa de Pequeno Porte</option>
+          <option value="Médio">Médio Porte</option>
+          <option value="Grande">Grande Porte</option>
+        </Select>
+      </div>
+
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+          <span style={{ fontWeight: 600, fontSize: 14, color: CORES.principal }}>Boxes</span>
+          <Btn small cor={CORES.principal} onClick={() => setForm({ ...form, boxes: [...form.boxes, { numero: '', dataEntrada: new Date().toISOString().split('T')[0] }] })}>
+            <Plus size={14} /> Adicionar
+          </Btn>
+        </div>
+        {form.boxes.map((box, i) => (
+          <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+            <Select value={box.numero} onChange={e => {
+              const selectedBox = boxesCadastro.find(b => String(b.numero) === String(e.target.value));
+              const updatedBox = { ...box, numero: e.target.value, incubadoraId: selectedBox?.incubadora_id || '' };
+              const newBoxes = [...form.boxes]; newBoxes[i] = updatedBox; setForm({ ...form, boxes: newBoxes });
+            }} style={{ flex: '0 0 160px' }}>
+              <option value="">Box...</option>
+              {boxesCadastro.map(b => {
+                const inc = incubadoras.find(i => i.id === b.incubadora_id);
+                const label = inc ? `Incubadora ${inc.numero} — Box ${b.numero}` : `Box ${b.numero}`;
+                return <option key={b.id} value={b.numero}>{label}</option>;
+              })}
+            </Select>
+            <Input type="date" value={box.dataEntrada} onChange={e => handleBoxChange(i, 'dataEntrada', e.target.value)} style={{ flex: 1 }} />
+            {form.boxes.length > 1 && (
+              <button onClick={() => setForm({ ...form, boxes: form.boxes.filter((_, j) => j !== i) })} style={{ background: CORES.perigo, color: 'white', border: 'none', padding: '0 10px', borderRadius: 6, cursor: 'pointer' }}>
+                <Trash2 size={14} />
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {erroForm && (
+        <div style={{ background: '#fef2f2', border: `1px solid ${CORES.perigo}`, borderRadius: 8, padding: '10px 14px', marginBottom: 14, fontSize: 13, color: CORES.perigo }}>
+          ⚠ {erroForm}
+        </div>
+      )}
+      <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+        <Btn outline cor={CORES.principal} onClick={onCancelar}>Cancelar</Btn>
+        <Btn onClick={() => {
+          setErroForm('');
+          if (!form.nomeEmpresa || !form.nomeEmpresa.trim()) {
+            setErroForm('Nome da empresa é obrigatório.');
+            return;
+          }
+          onSalvar(form, setErroForm);
+        }} disabled={carregando}>{carregando ? 'Salvando...' : empresa ? 'Salvar Alterações' : 'Adicionar Empresa'}</Btn>
+      </div>
+    </Modal>
+  );
+};
+
 const GestaoIncubadora = () => {
   const [usuario, setUsuario] = useState(null);
   const [carregando, setCarregando] = useState(true);
@@ -353,104 +457,6 @@ const GestaoIncubadora = () => {
           </button>
         </div>
       </div>
-    );
-  };
-
-  // ==================== FORMULÁRIO EMPRESA ====================
-  const FormularioEmpresa = ({ empresa = null, onSalvar, onCancelar, boxInicial = null }) => {
-    // Converter campos snake_case da API para camelCase do formulário
-    const formInicial = empresa ? {
-      nomeEmpresa: empresa.nome_empresa || '',
-      cnpj: empresa.cnpj || '',
-      inscricaoMunicipal: empresa.inscricao_municipal || '',
-      telefonePrincipal: empresa.telefone_principal || '',
-      telefoneSecundario: empresa.telefone_secundario || '',
-      numeroFuncionarios: empresa.numero_funcionarios || '',
-      atividade: empresa.atividade || '',
-      email: empresa.email_empresa || '',
-      porte: empresa.porte || '',
-      boxes: empresa.boxes_numeros
-        ? String(empresa.boxes_numeros).split(',').map(n => ({ numero: n.trim(), dataEntrada: empresa.data_entrada_mais_antiga || new Date().toISOString().split('T')[0] }))
-        : [{ numero: '', dataEntrada: new Date().toISOString().split('T')[0] }],
-      obrigacoes: []
-    } : {
-      nomeEmpresa: '', cnpj: '', inscricaoMunicipal: '', telefonePrincipal: '',
-      telefoneSecundario: '', numeroFuncionarios: '', atividade: '', email: '', porte: '',
-      boxes: [{ numero: boxInicial?.numero || '', dataEntrada: new Date().toISOString().split('T')[0], incubadoraId: boxInicial?.incubadoraId || '' }],
-      obrigacoes: []
-    };
-    const [form, setForm] = useState(formInicial);
-    const [erroForm, setErroForm] = useState('');
-
-    const handleBoxChange = (i, campo, val) => {
-      const b = [...form.boxes]; b[i] = { ...b[i], [campo]: val }; setForm({ ...form, boxes: b });
-    };
-
-    return (
-      <Modal titulo={empresa ? 'Editar Empresa' : 'Adicionar Empresa'} onFechar={onCancelar} largura={800}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
-          <Input label="Nome da Empresa" value={form.nomeEmpresa} onChange={e => setForm({ ...form, nomeEmpresa: e.target.value })} />
-          <Input label="CNPJ" value={form.cnpj} onChange={e => setForm({ ...form, cnpj: e.target.value })} />
-          <Input label="Inscrição Municipal" value={form.inscricaoMunicipal} onChange={e => setForm({ ...form, inscricaoMunicipal: e.target.value })} />
-          <Select label="Atividade" value={form.atividade} onChange={e => setForm({ ...form, atividade: e.target.value })}>
-            <option value="">Selecione...</option>
-            {listaAtividades.map(a => <option key={a} value={a}>{a}</option>)}
-          </Select>
-          <Input label="Telefone Principal" type="tel" value={form.telefonePrincipal} onChange={e => setForm({ ...form, telefonePrincipal: e.target.value })} />
-          <Input label="Telefone Secundário" type="tel" value={form.telefoneSecundario} onChange={e => setForm({ ...form, telefoneSecundario: e.target.value })} />
-          <Input label="Nº de Funcionários" type="number" value={form.numeroFuncionarios} onChange={e => setForm({ ...form, numeroFuncionarios: e.target.value })} />
-          <Input label="E-mail" type="email" value={form.email || ''} onChange={e => setForm({ ...form, email: e.target.value })} placeholder="contato@empresa.com.br" />
-          <Select label="Porte da Empresa" value={form.porte || ''} onChange={e => setForm({ ...form, porte: e.target.value })}>
-            <option value="">Selecione...</option>
-            <option value="MEI">MEI</option>
-            <option value="ME">ME — Microempresa</option>
-            <option value="EPP">EPP — Empresa de Pequeno Porte</option>
-            <option value="Médio">Médio Porte</option>
-            <option value="Grande">Grande Porte</option>
-          </Select>
-        </div>
-
-        <div style={{ marginBottom: 20 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-            <span style={{ fontWeight: 600, fontSize: 14, color: CORES.principal }}>Boxes</span>
-            <Btn small cor={CORES.principal} onClick={() => setForm({ ...form, boxes: [...form.boxes, { numero: '', dataEntrada: new Date().toISOString().split('T')[0] }] })}>
-              <Plus size={14} /> Adicionar
-            </Btn>
-          </div>
-          {form.boxes.map((box, i) => (
-            <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-              <Select value={box.numero} onChange={e => {
-                const selectedBox = boxesCadastro.find(b => String(b.numero) === String(e.target.value));
-                const updatedBox = { ...box, numero: e.target.value, incubadoraId: selectedBox?.incubadora_id || '' };
-                const newBoxes = [...form.boxes]; newBoxes[i] = updatedBox; setForm({ ...form, boxes: newBoxes });
-              }} style={{ flex: '0 0 160px' }}>
-                <option value="">Box...</option>
-                {boxesCadastro.map(b => {
-                  const inc = incubadoras.find(i => i.id === b.incubadora_id);
-                  const label = inc ? `Incubadora ${inc.numero} — Box ${b.numero}` : `Box ${b.numero}`;
-                  return <option key={b.id} value={b.numero}>{label}</option>;
-                })}
-              </Select>
-              <Input type="date" value={box.dataEntrada} onChange={e => handleBoxChange(i, 'dataEntrada', e.target.value)} style={{ flex: 1 }} />
-              {form.boxes.length > 1 && (
-                <button onClick={() => setForm({ ...form, boxes: form.boxes.filter((_, j) => j !== i) })} style={{ background: CORES.perigo, color: 'white', border: 'none', padding: '0 10px', borderRadius: 6, cursor: 'pointer' }}>
-                  <Trash2 size={14} />
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
-
-        {erroForm && (
-          <div style={{ background: '#fef2f2', border: `1px solid ${CORES.perigo}`, borderRadius: 8, padding: '10px 14px', marginBottom: 14, fontSize: 13, color: CORES.perigo }}>
-            ⚠ {erroForm}
-          </div>
-        )}
-        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-          <Btn outline cor={CORES.principal} onClick={onCancelar}>Cancelar</Btn>
-          <Btn onClick={() => { setErroForm(''); onSalvar(form, setErroForm); }} disabled={carregando}>{carregando ? 'Salvando...' : empresa ? 'Salvar Alterações' : 'Adicionar Empresa'}</Btn>
-        </div>
-      </Modal>
     );
   };
 
@@ -1646,8 +1652,8 @@ const GestaoIncubadora = () => {
       </div>
 
       {/* Modais */}
-      {mostrarFormulario && <FormularioEmpresa boxInicial={boxPreSelecionado} onSalvar={adicionarEmpresa} onCancelar={() => { setMostrarFormulario(false); setBoxPreSelecionado(null); }} />}
-      {empresaEmEdicao && <FormularioEmpresa empresa={empresaEmEdicao} onSalvar={(d, setErr) => atualizarEmpresa(empresaEmEdicao.id, d, setErr)} onCancelar={() => setEmpresaEmEdicao(null)} />}
+      {mostrarFormulario && <FormularioEmpresa boxInicial={boxPreSelecionado} onSalvar={adicionarEmpresa} onCancelar={() => { setMostrarFormulario(false); setBoxPreSelecionado(null); }} boxesCadastro={boxesCadastro} incubadoras={incubadoras} listaAtividades={listaAtividades} carregando={carregando} />}
+      {empresaEmEdicao && <FormularioEmpresa empresa={empresaEmEdicao} onSalvar={(d, setErr) => atualizarEmpresa(empresaEmEdicao.id, d, setErr)} onCancelar={() => setEmpresaEmEdicao(null)} boxesCadastro={boxesCadastro} incubadoras={incubadoras} listaAtividades={listaAtividades} carregando={carregando} />}
       {empresaControlesAberta && <ModalControlesEmpresa empresa={empresaControlesAberta} onFechar={() => setEmpresaControlesAberta(null)} />}
     </div>
   );
