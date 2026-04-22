@@ -103,6 +103,8 @@ const GestaoIncubadora = () => {
   const [vinculosBoxes, setVinculosBoxes] = useState([]); // {empresa_id, numero}
   const [filaEspera, setFilaEspera] = useState([]);
   const [mostrarDesativadas, setMostrarDesativadas] = useState(false);
+  const [mostrarExcluidas, setMostrarExcluidas] = useState(false);
+  const [empresasExcluidas, setEmpresasExcluidas] = useState([]);
 
   const listaAtividades = [
     'Serviços de Serralheria','Consultoria','Tecnologia','Design','Alimentos',
@@ -154,6 +156,8 @@ const GestaoIncubadora = () => {
       if (rTempo.sucesso) setTempoIncubadora(rTempo.dados);
       if (rEmpresas.sucesso) setEmpresas(rEmpresas.dados);
       if (rDesativadas.sucesso) setEmpresasDesativadas(rDesativadas.dados);
+      const rExcluidas = await API.listarEmpresasExcluidas();
+      if (rExcluidas.sucesso) setEmpresasExcluidas(rExcluidas.dados);
     } catch (e) { mostrarMsg('erro', 'Erro ao carregar dados'); }
   };
 
@@ -217,6 +221,19 @@ const GestaoIncubadora = () => {
     const r = await API.desativarEmpresa(id, usuario.email);
     if (r.sucesso) { mostrarMsg('sucesso', 'Empresa desativada'); await carregarEmpresas(); await carregarDados(); await carregarBoxes(); }
     else mostrarMsg('erro', r.erro);
+    setCarregando(false);
+  };
+
+  const excluirEmpresa = async (id, nomeEmpresa) => {
+    if (!window.confirm(`Excluir "${nomeEmpresa}"? Esta ação move a empresa para "Excluídas" e pode ser desfeita apenas excluindo permanentemente de lá.`)) return;
+    setCarregando(true);
+    const r = await API.excluirEmpresa(id, usuario.email);
+    if (r.sucesso) {
+      mostrarMsg('sucesso', 'Empresa excluída');
+      await carregarEmpresas(); await carregarDados(); await carregarBoxes();
+      const rEx = await API.listarEmpresasExcluidas();
+      if (rEx.sucesso) setEmpresasExcluidas(rEx.dados);
+    } else mostrarMsg('erro', r.erro);
     setCarregando(false);
   };
 
@@ -665,6 +682,9 @@ const GestaoIncubadora = () => {
             <Btn outline cor={CORES.textoSecundario} onClick={() => setMostrarDesativadas(!mostrarDesativadas)}>
               📁 Desativadas {empresasDesativadas.length > 0 && `(${empresasDesativadas.length})`}
             </Btn>
+            <Btn outline cor={CORES.perigo} onClick={() => setMostrarExcluidas(!mostrarExcluidas)}>
+              🗑 Excluídas {empresasExcluidas.length > 0 && `(${empresasExcluidas.length})`}
+            </Btn>
             <Btn onClick={() => setMostrarFormulario(true)}><Plus size={16} /> Adicionar Empresa</Btn>
           </div>
         </div>
@@ -685,6 +705,37 @@ const GestaoIncubadora = () => {
                   <div style={{ fontSize: 12, color: CORES.textoSecundario }}>CNPJ: {e.cnpj} · Saída: {new Date(e.data_saida).toLocaleDateString('pt-BR')}</div>
                 </div>
                 <Btn cor={CORES.sucesso} small onClick={() => reativarEmpresa(e.empresa_id)} disabled={carregando}>Reativar</Btn>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Seção excluídas expansível */}
+        {mostrarExcluidas && (
+          <div style={{ background: '#fff5f5', border: `1px solid #fecaca`, borderRadius: 10, padding: 16, marginBottom: 20 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <span style={{ fontWeight: 700, fontSize: 14, color: CORES.perigo }}>🗑 Empresas Excluídas</span>
+              <button onClick={() => setMostrarExcluidas(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: CORES.textoSecundario }}><X size={16} /></button>
+            </div>
+            {empresasExcluidas.length === 0 ? (
+              <p style={{ textAlign: 'center', color: CORES.textoSecundario, fontSize: 13 }}>Nenhuma empresa excluída.</p>
+            ) : empresasExcluidas.map(e => (
+              <div key={e.id} style={{ background: 'white', border: `1px solid #fecaca`, borderRadius: 8, padding: '10px 14px', marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <div style={{ fontWeight: 600, fontSize: 14 }}>{e.nome_empresa}</div>
+                  <div style={{ fontSize: 12, color: CORES.textoSecundario }}>
+                    {e.cnpj && `CNPJ: ${e.cnpj} · `}Excluída em: {new Date(e.created_at).toLocaleDateString('pt-BR')}
+                  </div>
+                </div>
+                <Btn cor={CORES.perigo} small onClick={async () => {
+                  if (!window.confirm('Excluir permanentemente? Esta ação não pode ser desfeita.')) return;
+                  const r = await API.excluirPermanentemente(e.id);
+                  if (r.sucesso) {
+                    mostrarMsg('sucesso', 'Excluído permanentemente');
+                    const rEx = await API.listarEmpresasExcluidas();
+                    if (rEx.sucesso) setEmpresasExcluidas(rEx.dados);
+                  } else mostrarMsg('erro', r.erro);
+                }}>Excluir permanentemente</Btn>
               </div>
             ))}
           </div>
@@ -761,6 +812,7 @@ const GestaoIncubadora = () => {
                     </Btn>
                     <Btn small onClick={() => setEmpresaEmEdicao(empresa)}>Editar</Btn>
                     <Btn small cor={CORES.perigo} onClick={() => desativarEmpresa(empresa.id)} disabled={carregando}>Desativar</Btn>
+                    <Btn small cor="#6b7280" onClick={() => excluirEmpresa(empresa.id, empresa.nome_empresa)} disabled={carregando}>Excluir</Btn>
                   </div>
                 </div>
               )}
