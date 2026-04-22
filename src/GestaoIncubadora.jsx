@@ -332,7 +332,7 @@ const GestaoIncubadora = () => {
       if (u) {
         setUsuario(u);
         await Promise.all([carregarDados(), carregarBoxes(), carregarControlesTipos(), carregarPendencias(), carregarFila()]);
-        if (u.email === 'filipeplis@hotmail.com') { const rs = await API.listarSolicitacoesAcesso(); if (rs.sucesso) setSolicitacoes(rs.dados); }
+        if (r.usuario?.email === 'filipeplis@hotmail.com') { const rs = await API.listarSolicitacoesAcesso(); if (rs.sucesso) setSolicitacoes(rs.dados); }
       } else {
         setAtivaPagina('login');
       }
@@ -529,7 +529,7 @@ const GestaoIncubadora = () => {
       if (r.sucesso) {
         setUsuario(r.usuario); setAtivaPagina('dashboard');
         await Promise.all([carregarDados(), carregarBoxes(), carregarControlesTipos(), carregarPendencias(), carregarFila()]);
-        if (u.email === 'filipeplis@hotmail.com') { const rs = await API.listarSolicitacoesAcesso(); if (rs.sucesso) setSolicitacoes(rs.dados); }
+        if (r.usuario?.email === 'filipeplis@hotmail.com') { const rs = await API.listarSolicitacoesAcesso(); if (rs.sucesso) setSolicitacoes(rs.dados); }
       } else { setErro('E-mail ou senha inválidos.'); }
       setLoading(false);
     };
