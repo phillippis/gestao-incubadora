@@ -216,10 +216,10 @@ const GestaoIncubadora = () => {
   };
 
   const desativarEmpresa = async (id) => {
-    if (!window.confirm('Desativar esta empresa?')) return;
+    if (!window.confirm('Desincubar esta empresa?')) return;
     setCarregando(true);
     const r = await API.desativarEmpresa(id, usuario.email);
-    if (r.sucesso) { mostrarMsg('sucesso', 'Empresa desativada'); await carregarEmpresas(); await carregarDados(); await carregarBoxes(); }
+    if (r.sucesso) { mostrarMsg('sucesso', 'Empresa desincubada'); await carregarEmpresas(); await carregarDados(); await carregarBoxes(); }
     else mostrarMsg('erro', r.erro);
     setCarregando(false);
   };
@@ -679,10 +679,10 @@ const GestaoIncubadora = () => {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 22 }}>
           <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700 }}>Empresas <span style={{ fontSize: 14, fontWeight: 400, color: CORES.textoSecundario }}>({empresasFiltradas.length})</span></h1>
           <div style={{ display: 'flex', gap: 8 }}>
-            <Btn outline cor={CORES.textoSecundario} onClick={() => setMostrarDesativadas(!mostrarDesativadas)}>
-              📁 Desativadas {empresasDesativadas.length > 0 && `(${empresasDesativadas.length})`}
+            <Btn outline cor={CORES.perigo} onClick={() => setMostrarDesativadas(!mostrarDesativadas)}>
+              🔴 Desincubadas {empresasDesativadas.length > 0 && `(${empresasDesativadas.length})`}
             </Btn>
-            <Btn outline cor={CORES.perigo} onClick={() => setMostrarExcluidas(!mostrarExcluidas)}>
+            <Btn outline cor={CORES.textoSecundario} onClick={() => setMostrarExcluidas(!mostrarExcluidas)}>
               🗑 Excluídas {empresasExcluidas.length > 0 && `(${empresasExcluidas.length})`}
             </Btn>
             <Btn onClick={() => setMostrarFormulario(true)}><Plus size={16} /> Adicionar Empresa</Btn>
@@ -693,7 +693,7 @@ const GestaoIncubadora = () => {
         {mostrarDesativadas && (
           <div style={{ background: '#fafafa', border: `1px solid ${CORES.bordas}`, borderRadius: 10, padding: 16, marginBottom: 20 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-              <span style={{ fontWeight: 700, fontSize: 14, color: CORES.textoSecundario }}>📁 Empresas Desativadas</span>
+              <span style={{ fontWeight: 700, fontSize: 14, color: CORES.textoSecundario }}>🔴 Empresas Desincubadas</span>
               <button onClick={() => setMostrarDesativadas(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: CORES.textoSecundario }}><X size={16} /></button>
             </div>
             {empresasDesativadas.length === 0 ? (
@@ -811,7 +811,7 @@ const GestaoIncubadora = () => {
                       <CheckCircle size={13} /> Controles
                     </Btn>
                     <Btn small onClick={() => setEmpresaEmEdicao(empresa)}>Editar</Btn>
-                    <Btn small cor={CORES.perigo} onClick={() => desativarEmpresa(empresa.id)} disabled={carregando}>Desativar</Btn>
+                    <Btn small cor={CORES.perigo} onClick={() => desativarEmpresa(empresa.id)} disabled={carregando}>Desincubar</Btn>
                     <Btn small cor="#6b7280" onClick={() => excluirEmpresa(empresa.id, empresa.nome_empresa)} disabled={carregando}>Excluir</Btn>
                   </div>
                 </div>
