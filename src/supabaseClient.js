@@ -1042,3 +1042,72 @@ export const listarVinculosBoxes = async () => {
     return { sucesso: false, dados: [], erro: erro.message };
   }
 };
+
+// ==================== FUNÇÕES DE EMPRESAS EXCLUÍDAS ====================
+
+export const excluirEmpresa = async (id, usuarioEmail) => {
+  try {
+    // Buscar dados da empresa
+    const { data: empresa, error: erroGet } = await supabase
+      .from('empresas')
+      .select('*')
+      .eq('id', id)
+      .single();
+    if (erroGet) throw erroGet;
+
+    // Registrar em empresas_excluidas
+    const { error: erroEx } = await supabase
+      .from('empresas_excluidas')
+      .insert([{
+        empresa_id: id,
+        nome_empresa: empresa.nome_empresa,
+        cnpj: empresa.cnpj,
+        dados_empresa: empresa,
+        excluido_por: usuarioEmail,
+      }]);
+    if (erroEx) throw erroEx;
+
+    // Desativar boxes da empresa
+    await supabase
+      .from('boxes')
+      .update({ ativo: false })
+      .eq('empresa_id', id);
+
+    // Deletar empresa
+    const { error: erroDel } = await supabase
+      .from('empresas')
+      .delete()
+      .eq('id', id);
+    if (erroDel) throw erroDel;
+
+    return { sucesso: true, erro: null };
+  } catch (erro) {
+    return { sucesso: false, erro: erro.message };
+  }
+};
+
+export const listarEmpresasExcluidas = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('empresas_excluidas')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return { sucesso: true, dados: data, erro: null };
+  } catch (erro) {
+    return { sucesso: false, dados: [], erro: erro.message };
+  }
+};
+
+export const excluirPermanentemente = async (id) => {
+  try {
+    const { error } = await supabase
+      .from('empresas_excluidas')
+      .delete()
+      .eq('id', id);
+    if (error) throw error;
+    return { sucesso: true, erro: null };
+  } catch (erro) {
+    return { sucesso: false, erro: erro.message };
+  }
+};
