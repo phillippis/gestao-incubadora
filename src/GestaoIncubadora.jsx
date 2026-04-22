@@ -240,7 +240,13 @@ const GestaoIncubadora = () => {
   const reativarEmpresa = async (id) => {
     setCarregando(true);
     const r = await API.reativarEmpresa(id, usuario.email);
-    if (r.sucesso) { mostrarMsg('sucesso', 'Empresa reativada'); await carregarDados(); }
+    if (r.sucesso) {
+      mostrarMsg('sucesso', 'Empresa reativada');
+      await carregarDados();
+      // Forçar reload das desincubadas
+      const rDes = await API.listarEmpresasDesativadas();
+      if (rDes.sucesso) setEmpresasDesativadas(rDes.dados || []);
+    }
     else mostrarMsg('erro', r.erro);
     setCarregando(false);
   };
