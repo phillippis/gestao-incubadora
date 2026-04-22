@@ -199,19 +199,45 @@ const GestaoIncubadora = () => {
   };
 
   // ==================== NEGÓCIO EMPRESAS ====================
-  const adicionarEmpresa = async (dados) => {
+  const adicionarEmpresa = async (dados, setErroForm) => {
     setCarregando(true);
-    const r = await API.criarEmpresa(dados, usuario.email);
-    if (r.sucesso) { mostrarMsg('sucesso', 'Empresa adicionada'); setMostrarFormulario(false); await carregarEmpresas(); await carregarDados(); await carregarBoxes(); }
-    else mostrarMsg('erro', r.erro);
+    try {
+      const r = await API.criarEmpresa(dados, usuario.email);
+      if (r.sucesso) {
+        mostrarMsg('sucesso', 'Empresa adicionada');
+        setMostrarFormulario(false);
+        await carregarEmpresas(); await carregarDados(); await carregarBoxes();
+      } else {
+        const msg = r.erro || 'Erro ao salvar. Verifique os dados e tente novamente.';
+        mostrarMsg('erro', msg);
+        if (setErroForm) setErroForm(msg);
+      }
+    } catch (e) {
+      const msg = 'Erro inesperado: ' + e.message;
+      mostrarMsg('erro', msg);
+      if (setErroForm) setErroForm(msg);
+    }
     setCarregando(false);
   };
 
-  const atualizarEmpresa = async (id, dados) => {
+  const atualizarEmpresa = async (id, dados, setErroForm) => {
     setCarregando(true);
-    const r = await API.atualizarEmpresa(id, dados, usuario.email);
-    if (r.sucesso) { mostrarMsg('sucesso', 'Empresa atualizada'); setEmpresaEmEdicao(null); await carregarEmpresas(); await carregarDados(); await carregarBoxes(); }
-    else mostrarMsg('erro', r.erro);
+    try {
+      const r = await API.atualizarEmpresa(id, dados, usuario.email);
+      if (r.sucesso) {
+        mostrarMsg('sucesso', 'Empresa atualizada');
+        setEmpresaEmEdicao(null);
+        await carregarEmpresas(); await carregarDados(); await carregarBoxes();
+      } else {
+        const msg = r.erro || 'Erro ao atualizar. Verifique os dados e tente novamente.';
+        mostrarMsg('erro', msg);
+        if (setErroForm) setErroForm(msg);
+      }
+    } catch (e) {
+      const msg = 'Erro inesperado: ' + e.message;
+      mostrarMsg('erro', msg);
+      if (setErroForm) setErroForm(msg);
+    }
     setCarregando(false);
   };
 
@@ -354,6 +380,7 @@ const GestaoIncubadora = () => {
       obrigacoes: []
     };
     const [form, setForm] = useState(formInicial);
+    const [erroForm, setErroForm] = useState('');
 
     const handleBoxChange = (i, campo, val) => {
       const b = [...form.boxes]; b[i] = { ...b[i], [campo]: val }; setForm({ ...form, boxes: b });
@@ -414,9 +441,14 @@ const GestaoIncubadora = () => {
           ))}
         </div>
 
+        {erroForm && (
+          <div style={{ background: '#fef2f2', border: `1px solid ${CORES.perigo}`, borderRadius: 8, padding: '10px 14px', marginBottom: 14, fontSize: 13, color: CORES.perigo }}>
+            ⚠ {erroForm}
+          </div>
+        )}
         <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
           <Btn outline cor={CORES.principal} onClick={onCancelar}>Cancelar</Btn>
-          <Btn onClick={() => onSalvar(form)} disabled={carregando}>{carregando ? 'Salvando...' : empresa ? 'Salvar Alterações' : 'Adicionar Empresa'}</Btn>
+          <Btn onClick={() => { setErroForm(''); onSalvar(form, setErroForm); }} disabled={carregando}>{carregando ? 'Salvando...' : empresa ? 'Salvar Alterações' : 'Adicionar Empresa'}</Btn>
         </div>
       </Modal>
     );
@@ -1615,7 +1647,7 @@ const GestaoIncubadora = () => {
 
       {/* Modais */}
       {mostrarFormulario && <FormularioEmpresa boxInicial={boxPreSelecionado} onSalvar={adicionarEmpresa} onCancelar={() => { setMostrarFormulario(false); setBoxPreSelecionado(null); }} />}
-      {empresaEmEdicao && <FormularioEmpresa empresa={empresaEmEdicao} onSalvar={d => atualizarEmpresa(empresaEmEdicao.id, d)} onCancelar={() => setEmpresaEmEdicao(null)} />}
+      {empresaEmEdicao && <FormularioEmpresa empresa={empresaEmEdicao} onSalvar={(d, setErr) => atualizarEmpresa(empresaEmEdicao.id, d, setErr)} onCancelar={() => setEmpresaEmEdicao(null)} />}
       {empresaControlesAberta && <ModalControlesEmpresa empresa={empresaControlesAberta} onFechar={() => setEmpresaControlesAberta(null)} />}
     </div>
   );
