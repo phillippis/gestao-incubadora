@@ -1152,3 +1152,49 @@ export const restaurarEmpresa = async (excluida_id, dadosEmpresa) => {
     return { sucesso: false, erro: erro.message };
   }
 };
+
+// ==================== SOLICITAÇÕES DE ACESSO ====================
+
+export const criarSolicitacaoAcesso = async (dados) => {
+  try {
+    const { data, error } = await supabase
+      .from('solicitacoes_acesso')
+      .insert([{
+        nome: dados.nome,
+        email: dados.email,
+        motivo: dados.motivo || null,
+        status: 'pendente',
+      }])
+      .select().single();
+    if (error) throw error;
+    return { sucesso: true, dados: data, erro: null };
+  } catch (erro) {
+    return { sucesso: false, dados: null, erro: erro.message };
+  }
+};
+
+export const listarSolicitacoesAcesso = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('solicitacoes_acesso')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return { sucesso: true, dados: data, erro: null };
+  } catch (erro) {
+    return { sucesso: false, dados: [], erro: erro.message };
+  }
+};
+
+export const atualizarSolicitacaoAcesso = async (id, status) => {
+  try {
+    const { error } = await supabase
+      .from('solicitacoes_acesso')
+      .update({ status })
+      .eq('id', id);
+    if (error) throw error;
+    return { sucesso: true, erro: null };
+  } catch (erro) {
+    return { sucesso: false, erro: erro.message };
+  }
+};
