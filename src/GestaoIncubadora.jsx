@@ -182,6 +182,94 @@ const FormularioEmpresa = ({ empresa = null, onSalvar, onCancelar, boxInicial = 
   );
 };
 
+// ==================== GESTÃO DE SOLICITAÇÕES DE ACESSO ====================
+const GestaoSolicitacoes = ({ solicitacoes, setSolicitacoes, mostrarMsg }) => {
+  const [loading, setLoading] = useState(false);
+
+  const atualizar = async (id, status, email, nome) => {
+    setLoading(true);
+    const r = await API.atualizarSolicitacaoAcesso(id, status);
+    if (r.sucesso) {
+      setSolicitacoes(prev => prev.map(s => s.id === id ? { ...s, status } : s));
+      if (status === 'aprovado') {
+        mostrarMsg('sucesso', `Solicitação de ${nome} aprovada. Crie o acesso no Supabase → Authentication → Users com o e-mail: ${email}`);
+      } else {
+        mostrarMsg('sucesso', `Solicitação de ${nome} rejeitada.`);
+      }
+    } else {
+      mostrarMsg('erro', r.erro);
+    }
+    setLoading(false);
+  };
+
+  const pendentes = solicitacoes.filter(s => s.status === 'pendente');
+  const processadas = solicitacoes.filter(s => s.status !== 'pendente');
+
+  const StatusBadge = ({ status }) => {
+    const cfg = {
+      pendente: { bg: '#fffbeb', color: CORES.aviso, label: '⏳ Pendente' },
+      aprovado: { bg: '#f0fdf4', color: CORES.sucesso, label: '✓ Aprovado' },
+      rejeitado: { bg: '#fef2f2', color: CORES.perigo, label: '✕ Rejeitado' },
+    }[status] || {};
+    return <span style={{ background: cfg.bg, color: cfg.color, borderRadius: 20, padding: '3px 10px', fontSize: 12, fontWeight: 700 }}>{cfg.label}</span>;
+  };
+
+  return (
+    <div>
+      <h1 style={{ marginBottom: 24, fontSize: 24, fontWeight: 700 }}>Solicitações de Acesso</h1>
+
+      {pendentes.length === 0 && processadas.length === 0 && (
+        <div style={{ textAlign: 'center', padding: 40, color: CORES.textoSecundario, background: CORES.fundo, borderRadius: 10 }}>
+          Nenhuma solicitação de acesso.
+        </div>
+      )}
+
+      {pendentes.length > 0 && (
+        <div style={{ marginBottom: 28 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: CORES.textoSecundario, marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Pendentes ({pendentes.length})
+          </div>
+          {pendentes.map(s => (
+            <div key={s.id} style={{ background: 'white', border: `1px solid ${CORES.aviso}`, borderRadius: 10, padding: '14px 18px', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 14 }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 600, fontSize: 15 }}>{s.nome}</div>
+                <div style={{ fontSize: 13, color: CORES.textoSecundario, marginTop: 2 }}>
+                  {s.email} · {new Date(s.created_at).toLocaleDateString('pt-BR')}
+                </div>
+                {s.motivo && <div style={{ fontSize: 12, color: CORES.textoSecundario, fontStyle: 'italic', marginTop: 4 }}>{s.motivo}</div>}
+              </div>
+              <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                <Btn small cor={CORES.sucesso} disabled={loading} onClick={() => atualizar(s.id, 'aprovado', s.email, s.nome)}>✓ Aprovar</Btn>
+                <Btn small cor={CORES.perigo} disabled={loading} onClick={() => atualizar(s.id, 'rejeitado', s.email, s.nome)}>✕ Rejeitar</Btn>
+              </div>
+            </div>
+          ))}
+          <div style={{ background: '#eff6ff', border: `1px solid #bfdbfe`, borderRadius: 8, padding: '10px 14px', fontSize: 13, color: '#1d4ed8' }}>
+            💡 Ao aprovar, vá em <strong>Supabase → Authentication → Users → Add user</strong> e cadastre o e-mail com uma senha temporária. Avise o usuário por e-mail.
+          </div>
+        </div>
+      )}
+
+      {processadas.length > 0 && (
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: CORES.textoSecundario, marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Histórico
+          </div>
+          {processadas.map(s => (
+            <div key={s.id} style={{ background: 'white', border: `1px solid ${CORES.bordas}`, borderRadius: 10, padding: '12px 18px', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 14 }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 600, fontSize: 14 }}>{s.nome}</div>
+                <div style={{ fontSize: 12, color: CORES.textoSecundario }}>{s.email} · {new Date(s.created_at).toLocaleDateString('pt-BR')}</div>
+              </div>
+              <StatusBadge status={s.status} />
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 const GestaoIncubadora = () => {
   const [usuario, setUsuario] = useState(null);
   const [carregando, setCarregando] = useState(true);
@@ -201,6 +289,7 @@ const GestaoIncubadora = () => {
   const [filterVisible, setFilterVisible] = useState(false);
   const [mensagem, setMensagem] = useState({ tipo: '', texto: '', visivel: false });
   const [empresaControlesAberta, setEmpresaControlesAberta] = useState(null);
+  const [solicitacoes, setSolicitacoes] = useState([]);
   const [filtroBoxStatus, setFiltroBoxStatus] = useState('todos');
   const [abaBoxes, setAbaBoxes] = useState('incubadoras');
   const [boxPreSelecionado, setBoxPreSelecionado] = useState(null);
@@ -243,6 +332,7 @@ const GestaoIncubadora = () => {
       if (u) {
         setUsuario(u);
         await Promise.all([carregarDados(), carregarBoxes(), carregarControlesTipos(), carregarPendencias(), carregarFila()]);
+        if (u.email === 'filipeplis@hotmail.com') { const rs = await API.listarSolicitacoesAcesso(); if (rs.sucesso) setSolicitacoes(rs.dados); }
       } else {
         setAtivaPagina('login');
       }
@@ -423,8 +513,12 @@ const GestaoIncubadora = () => {
 
   // ==================== TELA LOGIN ====================
   const TelaLogin = () => {
+    const [modo, setModo] = useState('login'); // 'login' | 'solicitar' | 'sucesso'
     const [email, setEmail] = useState('');
     const [senha, setSenha] = useState('');
+    const [nome, setNome] = useState('');
+    const [emailSolic, setEmailSolic] = useState('');
+    const [motivo, setMotivo] = useState('');
     const [erro, setErro] = useState('');
     const [loading, setLoading] = useState(false);
 
@@ -435,26 +529,112 @@ const GestaoIncubadora = () => {
       if (r.sucesso) {
         setUsuario(r.usuario); setAtivaPagina('dashboard');
         await Promise.all([carregarDados(), carregarBoxes(), carregarControlesTipos(), carregarPendencias(), carregarFila()]);
+        if (u.email === 'filipeplis@hotmail.com') { const rs = await API.listarSolicitacoesAcesso(); if (rs.sucesso) setSolicitacoes(rs.dados); }
       } else { setErro('E-mail ou senha inválidos.'); }
+      setLoading(false);
+    };
+
+    const handleSolicitar = async () => {
+      if (!nome.trim() || !emailSolic.trim()) { setErro('Preencha nome e e-mail.'); return; }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailSolic)) { setErro('E-mail inválido.'); return; }
+      setErro(''); setLoading(true);
+      try {
+        const r = await API.criarSolicitacaoAcesso({ nome, email: emailSolic, motivo });
+        if (r.sucesso) {
+          // Enviar notificação por email via EmailJS
+          await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              service_id: 'service_incubadora',
+              template_id: 'template_acesso',
+              user_id: 'user_incubadora',
+              template_params: {
+                to_email: 'filipeplis@hotmail.com',
+                from_name: nome,
+                from_email: emailSolic,
+                motivo: motivo || 'Não informado',
+                data: new Date().toLocaleDateString('pt-BR'),
+              }
+            })
+          }).catch(() => {}); // Ignora erro de email — solicitação já foi salva
+          setModo('sucesso');
+        } else {
+          setErro(r.erro?.includes('unique') ? 'Este e-mail já possui uma solicitação pendente.' : (r.erro || 'Erro ao enviar solicitação.'));
+        }
+      } catch (e) {
+        setErro('Erro inesperado. Tente novamente.');
+      }
       setLoading(false);
     };
 
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)' }}>
-        <div style={{ background: 'white', borderRadius: 14, padding: 40, width: '100%', maxWidth: 400, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
-          <div style={{ textAlign: 'center', marginBottom: 32 }}>
+        <div style={{ background: 'white', borderRadius: 14, padding: 40, width: '100%', maxWidth: 420, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+          <div style={{ textAlign: 'center', marginBottom: 28 }}>
             <div style={{ fontSize: 48, marginBottom: 10 }}>📦</div>
             <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: CORES.texto }}>Gestão Incubadora</h1>
             <p style={{ margin: '6px 0 0', fontSize: 13, color: CORES.textoSecundario }}>Prefeitura Municipal de Penápolis</p>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <Input label="E-mail" type="email" value={email} onChange={e => setEmail(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleLogin()} placeholder="seu@email.com" />
-            <Input label="Senha" type="password" value={senha} onChange={e => setSenha(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleLogin()} placeholder="••••••••" />
+
+          {/* Abas */}
+          <div style={{ display: 'flex', gap: 0, marginBottom: 24, background: CORES.fundo, borderRadius: 8, padding: 4 }}>
+            <button onClick={() => { setModo('login'); setErro(''); }} style={{ flex: 1, padding: '8px 0', borderRadius: 6, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 13, background: modo === 'login' ? 'white' : 'transparent', color: modo === 'login' ? CORES.principal : CORES.textoSecundario, boxShadow: modo === 'login' ? '0 1px 4px rgba(0,0,0,0.1)' : 'none' }}>
+              Entrar
+            </button>
+            <button onClick={() => { setModo('solicitar'); setErro(''); }} style={{ flex: 1, padding: '8px 0', borderRadius: 6, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 13, background: modo === 'solicitar' ? 'white' : 'transparent', color: modo === 'solicitar' ? CORES.principal : CORES.textoSecundario, boxShadow: modo === 'solicitar' ? '0 1px 4px rgba(0,0,0,0.1)' : 'none' }}>
+              Solicitar Acesso
+            </button>
           </div>
-          {erro && <div style={{ background: '#fef2f2', border: `1px solid ${CORES.perigo}`, borderRadius: 6, padding: '10px 12px', marginTop: 14, fontSize: 13, color: CORES.perigo }}>{erro}</div>}
-          <button onClick={handleLogin} disabled={loading} style={{ width: '100%', marginTop: 20, padding: 12, background: loading ? CORES.textoSecundario : CORES.principal, color: 'white', border: 'none', borderRadius: 8, fontSize: 15, fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer' }}>
-            {loading ? 'Entrando...' : 'Entrar'}
-          </button>
+
+          {/* Login */}
+          {modo === 'login' && (
+            <div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <Input label="E-mail" type="email" value={email} onChange={e => setEmail(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleLogin()} placeholder="seu@email.com" />
+                <Input label="Senha" type="password" value={senha} onChange={e => setSenha(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleLogin()} placeholder="••••••••" />
+              </div>
+              {erro && <div style={{ background: '#fef2f2', border: `1px solid ${CORES.perigo}`, borderRadius: 6, padding: '10px 12px', marginTop: 14, fontSize: 13, color: CORES.perigo }}>{erro}</div>}
+              <button onClick={handleLogin} disabled={loading} style={{ width: '100%', marginTop: 20, padding: 12, background: loading ? CORES.textoSecundario : CORES.principal, color: 'white', border: 'none', borderRadius: 8, fontSize: 15, fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer' }}>
+                {loading ? 'Entrando...' : 'Entrar'}
+              </button>
+            </div>
+          )}
+
+          {/* Solicitar Acesso */}
+          {modo === 'solicitar' && (
+            <div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <Input label="Seu nome *" value={nome} onChange={e => setNome(e.target.value)} placeholder="Nome completo" />
+                <Input label="Seu e-mail *" type="email" value={emailSolic} onChange={e => setEmailSolic(e.target.value)} placeholder="seu@email.com" />
+                <div>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: CORES.textoSecundario, marginBottom: 4 }}>Motivo / Cargo</label>
+                  <textarea value={motivo} onChange={e => setMotivo(e.target.value)} placeholder="Ex: Analista de desenvolvimento econômico" rows={2} style={{ width: '100%', padding: '8px 10px', border: `1px solid ${CORES.bordas}`, borderRadius: 6, fontSize: 14, boxSizing: 'border-box', resize: 'none' }} />
+                </div>
+              </div>
+              {erro && <div style={{ background: '#fef2f2', border: `1px solid ${CORES.perigo}`, borderRadius: 6, padding: '10px 12px', marginTop: 14, fontSize: 13, color: CORES.perigo }}>{erro}</div>}
+              <button onClick={handleSolicitar} disabled={loading} style={{ width: '100%', marginTop: 20, padding: 12, background: loading ? CORES.textoSecundario : CORES.principal, color: 'white', border: 'none', borderRadius: 8, fontSize: 15, fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer' }}>
+                {loading ? 'Enviando...' : 'Enviar Solicitação'}
+              </button>
+              <p style={{ textAlign: 'center', fontSize: 12, color: CORES.textoSecundario, marginTop: 12, marginBottom: 0 }}>
+                Após a solicitação, o administrador será notificado e criará seu acesso.
+              </p>
+            </div>
+          )}
+
+          {/* Sucesso */}
+          {modo === 'sucesso' && (
+            <div style={{ textAlign: 'center', padding: '8px 0' }}>
+              <div style={{ fontSize: 48, marginBottom: 16 }}>✅</div>
+              <h2 style={{ margin: '0 0 12px', fontSize: 18, fontWeight: 700, color: CORES.texto }}>Solicitação enviada!</h2>
+              <p style={{ fontSize: 14, color: CORES.textoSecundario, marginBottom: 24 }}>
+                O administrador foi notificado e irá criar seu acesso em breve. Você receberá as credenciais por e-mail.
+              </p>
+              <button onClick={() => { setModo('login'); setNome(''); setEmailSolic(''); setMotivo(''); }} style={{ padding: '10px 24px', background: CORES.principal, color: 'white', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+                Voltar ao Login
+              </button>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -1563,12 +1743,14 @@ const GestaoIncubadora = () => {
     return <><Mensagem /><TelaLogin /></>;
   }
 
+  const isAdmin = usuario?.email === 'filipeplis@hotmail.com';
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: '📊' },
     { id: 'empresas', label: 'Empresas', icon: '🏢' },
     { id: 'fila', label: 'Fila de Espera', icon: '⏳' },
     { id: 'boxes', label: 'Boxes', icon: '📦' },
     { id: 'controles', label: 'Controles', icon: '✅' },
+    ...(isAdmin ? [{ id: 'solicitacoes', label: 'Acessos', icon: '👤' }] : []),
   ];
 
   return (
@@ -1599,6 +1781,11 @@ const GestaoIncubadora = () => {
               {item.id === 'empresas' && empresasComPendencias.length > 0 && (
                 <span style={{ marginLeft: 6, background: CORES.perigo, color: 'white', borderRadius: 20, padding: '1px 7px', fontSize: 11, fontWeight: 700 }}>
                   {empresasComPendencias.length}
+                </span>
+              )}
+              {item.id === 'solicitacoes' && solicitacoes.filter(s => s.status === 'pendente').length > 0 && (
+                <span style={{ marginLeft: 6, background: CORES.aviso, color: 'white', borderRadius: 20, padding: '1px 7px', fontSize: 11, fontWeight: 700 }}>
+                  {solicitacoes.filter(s => s.status === 'pendente').length}
                 </span>
               )}
             </button>
@@ -1648,6 +1835,7 @@ const GestaoIncubadora = () => {
           {ativaPagina === 'fila' && <FilaEspera />}
           {ativaPagina === 'boxes' && <GestaoBoxes />}
           {ativaPagina === 'controles' && <GestaoControles />}
+          {ativaPagina === 'solicitacoes' && isAdmin && <GestaoSolicitacoes solicitacoes={solicitacoes} setSolicitacoes={setSolicitacoes} mostrarMsg={mostrarMsg} />}
         </div>
       </div>
 
