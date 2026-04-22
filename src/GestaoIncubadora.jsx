@@ -727,15 +727,26 @@ const GestaoIncubadora = () => {
                     {e.cnpj && `CNPJ: ${e.cnpj} · `}Excluída em: {new Date(e.created_at).toLocaleDateString('pt-BR')}
                   </div>
                 </div>
-                <Btn cor={CORES.perigo} small onClick={async () => {
-                  if (!window.confirm('Excluir permanentemente? Esta ação não pode ser desfeita.')) return;
-                  const r = await API.excluirPermanentemente(e.id);
-                  if (r.sucesso) {
-                    mostrarMsg('sucesso', 'Excluído permanentemente');
-                    const rEx = await API.listarEmpresasExcluidas();
-                    if (rEx.sucesso) setEmpresasExcluidas(rEx.dados);
-                  } else mostrarMsg('erro', r.erro);
-                }}>Excluir permanentemente</Btn>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <Btn cor={CORES.sucesso} small onClick={async () => {
+                    const r = await API.restaurarEmpresa(e.id, e.dados_empresa);
+                    if (r.sucesso) {
+                      mostrarMsg('sucesso', 'Empresa restaurada');
+                      await carregarEmpresas(); await carregarDados();
+                      const rEx = await API.listarEmpresasExcluidas();
+                      if (rEx.sucesso) setEmpresasExcluidas(rEx.dados);
+                    } else mostrarMsg('erro', r.erro);
+                  }}>↩ Restaurar</Btn>
+                  <Btn cor={CORES.perigo} small onClick={async () => {
+                    if (!window.confirm('Excluir permanentemente? Esta ação não pode ser desfeita.')) return;
+                    const r = await API.excluirPermanentemente(e.id);
+                    if (r.sucesso) {
+                      mostrarMsg('sucesso', 'Excluído permanentemente');
+                      const rEx = await API.listarEmpresasExcluidas();
+                      if (rEx.sucesso) setEmpresasExcluidas(rEx.dados);
+                    } else mostrarMsg('erro', r.erro);
+                  }}>Excluir permanentemente</Btn>
+                </div>
               </div>
             ))}
           </div>
