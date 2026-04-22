@@ -1111,3 +1111,36 @@ export const excluirPermanentemente = async (id) => {
     return { sucesso: false, erro: erro.message };
   }
 };
+
+export const restaurarEmpresa = async (excluida_id, dadosEmpresa) => {
+  try {
+    // Recriar a empresa com os dados originais
+    const { error: erroInsert } = await supabase
+      .from('empresas')
+      .insert([{
+        id: dadosEmpresa.id,
+        nome_empresa: dadosEmpresa.nome_empresa,
+        cnpj: dadosEmpresa.cnpj,
+        inscricao_municipal: dadosEmpresa.inscricao_municipal,
+        telefone_principal: dadosEmpresa.telefone_principal,
+        telefone_secundario: dadosEmpresa.telefone_secundario,
+        numero_funcionarios: dadosEmpresa.numero_funcionarios,
+        atividade: dadosEmpresa.atividade,
+        email_empresa: dadosEmpresa.email_empresa,
+        porte: dadosEmpresa.porte,
+        ativa: true,
+      }]);
+    if (erroInsert) throw erroInsert;
+
+    // Remover do registro de excluídas
+    const { error: erroDel } = await supabase
+      .from('empresas_excluidas')
+      .delete()
+      .eq('id', excluida_id);
+    if (erroDel) throw erroDel;
+
+    return { sucesso: true, erro: null };
+  } catch (erro) {
+    return { sucesso: false, erro: erro.message };
+  }
+};
